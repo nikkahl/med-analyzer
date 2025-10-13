@@ -1,6 +1,6 @@
 // src/controllers/auth.controller.js
 
-import AuthService from '../services/auth.service.js';
+import AuthService from '../services/auth-temp.js';
 
 class AuthController {
   async register(req, res) {
