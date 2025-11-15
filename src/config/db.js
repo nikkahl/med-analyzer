@@ -1,24 +1,15 @@
 // src/config/db.js
 
-const mongoose = require('mongoose');
-const logger = require('../logger'); 
+import mongoose from 'mongoose';
+import 'dotenv/config'; 
 const connectDB = async () => {
   try {
-    
-    const mongoURI = process.env.MONGO_URI;
-    if (!mongoURI) {
-      logger.error('MONGO_URI is not defined in the environment variables.');
-      process.exit(1); //  перевірка, що зупинитить застосунок, якщо не задати змінну
-    }
-
-    await mongoose.connect(mongoURI);
-
-    logger.info('MongoDB Connected...');
-  } catch (err) {
-    logger.error(`MongoDB connection error: ${err.message}`);
-    // вихід з процесу з помилкою
+    const conn = await mongoose.connect(process.env.MONGO_URI);
+    console.log(`MongoDB Connected: ${conn.connection.host}`);
+  } catch (error) {
+    console.error(`Error connecting to MongoDB: ${error.message}`);
     process.exit(1);
   }
 };
 
-module.exports = connectDB;
+export default connectDB;

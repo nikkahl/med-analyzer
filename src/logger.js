@@ -1,6 +1,6 @@
 // src/logger.js
 
-const winston = require('winston');
+import winston from 'winston';
 
 const logger = winston.createLogger({
   level: 'info', // Записувати логи рівня 'info' і вище ('warn', 'error')
@@ -23,4 +23,4 @@ if (process.env.NODE_ENV !== 'production') {
   }));
 }
 
-module.exports = logger;
+export default logger;
