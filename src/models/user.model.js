@@ -6,16 +6,16 @@ const userSchema = new mongoose.Schema({
   email: {
     type: String,
     required: true,
-    unique: true, // пошта має бути унікальною [cite: 81]
+    unique: true, 
     lowercase: true,
     trim: true,
   },
   passwordHash: {
     type: String,
-    required: true, // хеш пароля
+    required: true, 
   },
-}, {
-  //  додає поля createdAt та updatedAt [cite: 83]
+},
+ {
   timestamps: true,
 });
 

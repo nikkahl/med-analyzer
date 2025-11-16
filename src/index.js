@@ -5,10 +5,11 @@ import express from 'express';
 import logger from './logger.js'; 
 import connectDB from './config/db.js';
 import apiRoutes from './routes/index.js';
+import analysisRoutes from './routes/analysis.routes.js';
+import indicatorRoutes from './routes/indicator.routes.js';
+import ParserService from './services/parser.service.js';
 
 const { PORT, MONGO_URI } = process.env;
-
-// перевірка змінних середовища
 if (!PORT || !MONGO_URI) {
   logger.log({
     level: 'error',
@@ -17,24 +18,17 @@ if (!PORT || !MONGO_URI) {
   process.exit(1);
 }
 
-// підключення до бд
-connectDB(); //  виклик функції для підключення до MongoDB
-
+connectDB(); 
 const app = express();
-
-
-// Middleware для розбору JSON-тіла запитів
 app.use(express.json()); 
-
 
 app.get('/', (req, res) => {
   res.send('Hello from configured Express server!');
 });
 
-
-// підключення основного роутера до шляху /api
 app.use('/api', apiRoutes);
-
+app.use('/api/analyses', analysisRoutes);
+app.use('/api/indicators', indicatorRoutes);
 
 app.listen(PORT, () => {
   logger.log({

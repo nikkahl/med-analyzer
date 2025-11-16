@@ -13,7 +13,7 @@ COPY package*.json ./
 
 # Етап 4: Встановлення залежностей проєкту
 RUN npm install
-
+RUN apk add --no-cache ca-certificates
 # Етап 5: Копіювання решти коду проєкту
 # Копіюємо весь код з нашої теки в робочу теку /app контейнера.
 COPY . .
