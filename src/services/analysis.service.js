@@ -8,24 +8,24 @@ class AnalysisService {
    * @returns {Promise<Document>} - Збережений документ 
    */
   async create(userId, data) {
-    try {
-      const { rawOcrText, parsedData } = data;
+  try {
+    const { rawOcrText, parsedData } = data;
+    const anonymizedText = anonymizeRawText(rawOcrText);
+    const newAnalysis = new Analysis({
+      userId,
+      rawOcrText: anonymizedText, 
+      indicators: parsedData,
+    });
 
-      const newAnalysis = new Analysis({
-        userId,
-        rawOcrText,
-        indicators: parsedData,
-      });
+    await newAnalysis.save();
+    logger.info(`New analysis saved for user ${userId}`);
+    return newAnalysis;
 
-      await newAnalysis.save();
-      logger.info(`New analysis saved for user ${userId}`);
-      return newAnalysis;
-
-    } catch (error) {
-      logger.error('Error saving analysis to database', error);
-      throw new Error('Could not save analysis.');
-    }
+  } catch (error) {
+    logger.error('Error saving analysis to database', error);
+    throw new Error('Could not save analysis.');
   }
+}
 
   /**
    * Отримує всі аналізи для конкретного користувача
@@ -43,4 +43,17 @@ class AnalysisService {
   }
 }
 
+/**
+ * анонімізує ПІБ у сирому тексті.
+ * @param {string} text - Сирий текст з OCR.
+ * @returns {string} - Анонімізований текст.
+ */
+
+function anonymizeRawText(text) {
+ 
+  const patientRegex = /^(Пацієнт|ПІБ|ім'я|Ім'я|Patient|Name):.*$/gim;
+  const replacement = "Пацієнт: [КОНФІДЕНЦІЙНО]";
+
+  return text.replace(patientRegex, replacement);
+}
 export default new AnalysisService();

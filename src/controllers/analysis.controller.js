@@ -5,16 +5,21 @@ import logger from '../logger.js';
 
 class AnalysisController {
 
-  async uploadAnalysis(req, res) {
-    try {
+async uploadAnalysis(req, res) {
+  try {
 
-      if (!req.file) {
-        return res.status(400).json({ message: 'No file uploaded' });
-      }
+    if (req.fileValidationError) {
+      return res.status(400).json({ message: req.fileValidationError });
+    }
 
-      if (!req.user) {
-        return res.status(401).json({ message: 'User not authenticated' });
-      }
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+
+    if (!req.user) {
+      return res.status(401).json({ message: 'User not authenticated' });
+    }
+
 
 const userId = req.user.id;
 
@@ -35,6 +40,9 @@ const analysisData = {
       });
 
     } catch (error) {
+      if (error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ message: 'File is too large. Max size is 5MB.' });
+    }
       logger.error('Error in uploadAnalysis controller:', error);
       if (error.message.includes('recognize text')) {
         return res.status(500).json({ message: 'Server error during OCR process' });
@@ -46,7 +54,6 @@ const analysisData = {
     }
   }
 
-  // метод для отримання "Історії"
   async getHistory(req, res) {
     try {
       if (!req.user) {

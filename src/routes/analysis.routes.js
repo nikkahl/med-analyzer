@@ -6,7 +6,23 @@ import AnalysisController from '../controllers/analysis.controller.js';
 const router = Router();
 
 const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
+
+const fileFilter = (req, file, cb) => {
+  if (file.mimetype === 'image/jpeg' || file.mimetype === 'image/png') {
+    cb(null, true);
+  } else {
+    req.fileValidationError = 'Invalid file type. Only JPEG and PNG are allowed.';
+    cb(null, false);
+  }
+};
+
+const upload = multer({
+  storage: storage,
+  fileFilter: fileFilter, 
+  limits: {
+    fileSize: 5 * 1024 * 1024 
+  }
+});
 
 router.post(
   '/upload',
@@ -17,7 +33,7 @@ router.post(
 
 router.get(
   '/history',
-  authMiddleware, 
+  authMiddleware,
   AnalysisController.getHistory
 );
 
