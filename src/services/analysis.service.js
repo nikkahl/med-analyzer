@@ -9,10 +9,11 @@ class AnalysisService {
    */
   async create(userId, data) {
   try {
-    const { rawOcrText, parsedData } = data;
+    const { rawOcrText, parsedData, originalFilePath} = data;
     const anonymizedText = anonymizeRawText(rawOcrText);
     const newAnalysis = new Analysis({
       userId,
+      originalFilePath,
       rawOcrText: anonymizedText, 
       indicators: parsedData,
     });

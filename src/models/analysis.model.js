@@ -1,7 +1,6 @@
 import mongoose from 'mongoose';
 const { Schema } = mongoose;
 
-// Це схема для *вбудованого* об'єкта показника
 const indicatorResultSchema = new Schema({
   dictionaryId: { // [cite: 97]
     type: Schema.Types.ObjectId,

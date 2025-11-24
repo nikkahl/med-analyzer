@@ -22,8 +22,10 @@ connectDB();
 const app = express();
 app.use(express.json()); 
 
+app.use(express.static('public'));
+
 app.get('/', (req, res) => {
-  res.send('Hello from configured Express server!');
+ res.sendFile('index.html', { root: 'public' });
 });
 
 app.use('/api', apiRoutes);

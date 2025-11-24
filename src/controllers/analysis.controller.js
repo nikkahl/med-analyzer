@@ -29,6 +29,7 @@ const rawText = await OcrService.recognize(req.file.buffer);
 const parsedIndicators = ParserService.parse(rawText);
 
 const analysisData = {
+        originalFilePath: req.file.path,
         rawOcrText: rawText,
         parsedData: parsedIndicators
       };

@@ -1,20 +1,21 @@
+version: '3.8'
 
 services:
   app:
-    # Вказуємо Docker зібрати цей сервіс з Dockerfile у поточній теці (.)
     build: .
     ports:
       - "3000:3000"
-    # Синхронізуємо файли. Зміни в коді на комп'ютері миттєво з'являться в контейнері.
     volumes:
-      - .:/app
-      - /app/node_modules 
+      - ./src:/app/src         
+      - ./public:/app/public   
+      - /app/node_modules      
     environment:
+      - PORT=3000              
       - MONGO_URI=mongodb://mongo:27017/med-analyzer
+      - JWT_SECRET=mysecretkey123
     depends_on:
       - mongo
 
-  # 2. Сервіс бази даних MongoDB
   mongo:
     image: mongo:latest
     ports:

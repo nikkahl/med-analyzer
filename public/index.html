@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MedAnalyzer - Вхід до системи</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="split-screen-container">
+        <div class="brand-side">
+            <div class="brand-content">
+                <h1>MedAnalyzer</h1>
+                <p>Ваш розумний помічник у аналізі медичних показників.</p>
+                <p class="brand-subtext"></p>
+            </div>
+            <div class="brand-overlay"></div>
+        </div>
+
+        <div class="form-side">
+            <div class="form-wrapper">
+                <div class="mobile-brand">-MedAnalyzer-</div>
+                
+                <form id="loginForm" class="auth-form fade-in">
+                    <div class="form-header">
+                        <h2>З поверненням!</h2>
+                        <p class="subtitle">Увійдіть, щоб отримати доступ до своїх аналізів.</p>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="loginEmail">Email</label>
+                        <input type="email" id="loginEmail" placeholder="example@mail.com" required>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="loginPassword">Пароль</label>
+                        <input type="password" id="loginPassword" placeholder="Введіть пароль" required>
+                    </div>
+                    
+                    <button type="submit" class="btn-primary">Увійти</button>
+                    
+                    <p class="switch-text">
+                        Немає акаунту? <a href="#" id="showRegister">Створити зараз</a>
+                    </p>
+                </form>
+
+                <form id="registerForm" class="auth-form hidden fade-in">
+                     <div class="form-header">
+                        <h2>Створення акаунту</h2>
+                        <p class="subtitle">Зареєструйтесь для початку роботи з системою.</p>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="regEmail">Email</label>
+                        <input type="email" id="regEmail" placeholder="example@mail.com" required>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="regPassword">Пароль</label>
+                        <input type="password" id="regPassword" placeholder="Придумайте надійний пароль" required>
+                    </div>
+                    
+                    <button type="submit" class="btn-primary">Створити акаунт</button>
+                    
+                    <p class="switch-text">
+                        Вже є акаунт? <a href="#" id="showLogin">Увійти</a>
+                    </p>
+                </form>
+            </div>
+        </div>
+    </div>
+    <script src="js/auth.js"></script>
+</body>
+</html>
