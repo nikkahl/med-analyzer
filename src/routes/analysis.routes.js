@@ -48,4 +48,6 @@ router.get(
     AnalysisController.getAnalysisById
 ); 
 
+router.delete('/:id', authMiddleware, AnalysisController.deleteAnalysis);
+
 export default router;

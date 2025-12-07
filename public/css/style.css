@@ -822,3 +822,22 @@ body.dashboard-body {
         margin-top: 30px;
     }
 }
+.delete-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+    padding: 5px;
+    z-index: 10;
+}
+
+.delete-btn:hover {
+    opacity: 1;
+    color: #dc2626;
+    transform: scale(1.1);
+}

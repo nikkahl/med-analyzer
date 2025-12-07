@@ -513,16 +513,24 @@ function renderHistoryCards(analyses) {
 
         const card = document.createElement('div');
         card.className = 'history-card';
+        card.style.position = 'relative';
+
         card.innerHTML = `
-            <div class="history-date">📅 ${date}</div>
+            <div class="history-date"> дата ${date}</div>
             <div class="history-status success">Оброблено</div>
-            <div style="font-size: 0.9rem; color: #555; text-decoration: underline;">Натисніть для деталей</div>
+            <div style="font-size: 0.9rem; color: #555; margin-top: 5px;">Натисніть для деталей</div>
+            
+            <button class="delete-btn" title="Видалити запис">видалити</button>
         `;
         
-        // Додаємо обробник кліку на ВЕСЬ блок картки
         card.onclick = function() {
-            // alert('Клік по картці! Завантажую ID: ' + item._id); // Тимчасова перевірка
             openHistoryItem(item._id);
+        };
+
+        const deleteBtn = card.querySelector('.delete-btn');
+        deleteBtn.onclick = function(e) {
+            e.stopPropagation(); 
+            deleteAnalysisItem(item._id);
         };
         
         historyGrid.appendChild(card);
@@ -538,7 +546,7 @@ async function openHistoryItem(id) {
             skeleton.classList.remove('hidden');
             skeleton.scrollIntoView({ behavior: 'smooth' });
         }
-        if(resultSec) resultSec.classList.add('hidden'); // Ховаємо старий результат поки вантажимо новий
+        if(resultSec) resultSec.classList.add('hidden'); 
         
         console.log(`Запит деталей для ID: ${id}`);
         const res = await authFetch(`/api/analyses/${id}`);
@@ -575,4 +583,29 @@ async function openHistoryItem(id) {
 if (token) {
     loadChartsData(); 
     initHistoryGrid(); 
+}
+
+async function deleteAnalysisItem(id) {
+    if (!confirm('Ви впевнені, що хочете видалити цей аналіз? Це незворотно.')) {
+        return;
+    }
+
+    try {
+        const res = await authFetch(`/api/analyses/${id}`, {
+            method: 'DELETE'
+        });
+
+        if (res.ok) {
+            await loadHistoryInitial(); 
+            await loadChartsData(); 
+            if (currentAnalysisId === id) {
+                document.getElementById('resultSection').classList.add('hidden');
+            }
+        } else {
+            alert('Не вдалося видалити аналіз');
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Помилка при видаленні');
+    }
 }

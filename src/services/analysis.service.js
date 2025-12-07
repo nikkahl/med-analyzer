@@ -70,6 +70,19 @@ class AnalysisService {
       throw error;
     }
   }
+
+  async delete(analysisId, userId) {
+    try {
+      const result = await Analysis.findOneAndDelete({ _id: analysisId, user: userId });
+      if (!result) {
+        throw new Error('Analysis not found or access denied');
+      }
+      return result;
+    } catch (error) {
+      logger.error(`Error deleting analysis ${analysisId}`, error);
+      throw error;
+    }
+  }
 }
 
 function anonymizeRawText(text) {
