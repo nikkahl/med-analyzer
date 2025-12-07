@@ -24,7 +24,6 @@ class AnalysisController {
       const rawText = await OcrService.recognize(req.file.buffer);
       const parsedIndicators = ParserService.parse(rawText);
 
-      // Використовуємо абсолютний шлях для Docker
       const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
       if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
@@ -42,9 +41,7 @@ class AnalysisController {
 
       const savedAnalysis = await AnalysisService.create(userId, analysisData);
 
-      // Повертаємо збережений об'єкт, але з гарантією наявності показників
       const responseData = savedAnalysis.toObject();
-      // Якщо Mongoose не зберіг indicators (через помилку типу), беремо parsedData
       if (!responseData.indicators || responseData.indicators.length === 0) {
           responseData.indicators = responseData.parsedData || parsedIndicators;
       }
@@ -63,7 +60,7 @@ class AnalysisController {
   async getHistory(req, res) {
     try {
       const page = parseInt(req.query.page) || 1;
-      const limit = 20; // Збільшив ліміт, щоб графіки будувалися краще
+      const limit = 20; 
       const skip = (page - 1) * limit;
       const userId = req.user._id || req.user.id;
 
@@ -74,10 +71,8 @@ class AnalysisController {
 
       const total = await Analysis.countDocuments({ user: userId });
 
-      // МАПІНГ (Виправлення проблеми з пустими даними)
       const mappedAnalyses = analyses.map(a => {
           const obj = a.toObject();
-          // Критична перевірка: якщо indicators пустий, беремо parsedData
           const safeIndicators = (obj.indicators && obj.indicators.length > 0) 
               ? obj.indicators 
               : (obj.parsedData || []);
@@ -87,7 +82,7 @@ class AnalysisController {
               createdAt: obj.createdAt,
               status: obj.status || 'completed',
               imageUrl: obj.originalFilePath,
-              indicators: safeIndicators // Тепер тут точно будуть дані
+              indicators: safeIndicators 
           };
       });
 
@@ -125,7 +120,6 @@ class AnalysisController {
   }
 
   async updateIndicator(req, res) {
-    // ... (без змін)
     try {
       const { analysisId, indicatorId } = req.params;
       const { value } = req.body;
@@ -134,6 +128,24 @@ class AnalysisController {
     } catch (error) {
       logger.error('Error updating indicator:', error);
       return res.status(500).json({ message: 'Error updating value' });
+    }
+  }
+
+  async deleteAnalysis(req, res) {
+    try {
+        const { id } = req.params;
+        const userId = req.user._id || req.user.id;
+
+        const deletedAnalysis = await Analysis.findOneAndDelete({ _id: id, user: userId });
+
+        if (!deletedAnalysis) {
+            return res.status(404).json({ message: 'Аналіз не знайдено або у вас немає прав' });
+        }
+
+        return res.status(200).json({ message: 'Аналіз успішно видалено' });
+    } catch (error) {
+        logger.error('Error in deleteAnalysis:', error);
+        return res.status(500).json({ message: 'Помилка сервера при видаленні' });
     }
   }
 }
