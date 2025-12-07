@@ -373,7 +373,7 @@ window.saveIndicatorValue = async function(id) {
 }
 
 // ==========================================
-// 4. ГРАФІКИ ТА АНАЛІТИКА (Стара історія)
+// 4. ГРАФІКИ ТА АНАЛІТИКА
 // ==========================================
 
 const indicatorSelectElement = document.getElementById('indicatorSelect');
@@ -388,7 +388,7 @@ async function loadChartsData() {
         
         globalHistoryData = responseData.data.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
 
-        console.log("Дані для графіків завантажено:", globalHistoryData); // ДЕБАГ
+        console.log("Дані для графіків завантажено:", globalHistoryData);
 
         if (globalHistoryData.length === 0) {
             indicatorSelectElement.innerHTML = '<option disabled selected>Дані відсутні</option>';
@@ -416,7 +416,6 @@ function populateIndicatorSelect() {
     });
     
     const uniqueIndicators = Array.from(allIndicatorsSet).sort();
-    console.log("Знайдені показники:", uniqueIndicators); // ДЕБАГ
 
     indicatorSelectElement.innerHTML = '';
     
@@ -466,8 +465,62 @@ function updateChartFromSelection() {
     renderChart(labels, dataPoints, `${selectedIndicatorName}${titleUnitPart}`, refMin, refMax);
 }
 
+// Функція для малювання графіка (додано)
+function renderChart(labels, data, label, minRef, maxRef) {
+    const ctx = document.getElementById('dynamicsChart');
+    if (!ctx) return;
+
+    if (myChart) {
+        myChart.destroy();
+    }
+
+    const datasets = [{
+        label: label,
+        data: data,
+        borderColor: '#4a90e2',
+        backgroundColor: 'rgba(74, 144, 226, 0.1)',
+        tension: 0.3,
+        fill: true
+    }];
+
+    if (minRef !== null && maxRef !== null) {
+        datasets.push({
+            label: 'Мін. норма',
+            data: new Array(data.length).fill(minRef),
+            borderColor: 'rgba(255, 99, 132, 0.5)',
+            borderDash: [5, 5],
+            pointRadius: 0,
+            fill: false
+        });
+        datasets.push({
+            label: 'Макс. норма',
+            data: new Array(data.length).fill(maxRef),
+            borderColor: 'rgba(255, 99, 132, 0.5)',
+            borderDash: [5, 5],
+            pointRadius: 0,
+            fill: false
+        });
+    }
+
+    myChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: datasets
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: false 
+                }
+            }
+        }
+    });
+}
+
 // ==========================================
-// 5. ІСТОРІЯ У ВИГЛЯДІ СІТКИ (Нова логіка)
+// 5. ІСТОРІЯ У ВИГЛЯДІ СІТКИ (Виправлено)
 // ==========================================
 
 async function initHistoryGrid() {
@@ -505,7 +558,9 @@ async function loadHistoryPage() {
 }
 
 function renderHistoryCards(analyses) {
-    historyGrid.innerHTML = ''; 
+    // historyGrid не очищуємо повністю тут, щоб працювала пагінація "Load More", 
+    // але якщо це 1 сторінка - initHistoryGrid вже очистив.
+    
     analyses.forEach(item => {
         const date = new Date(item.createdAt).toLocaleDateString('uk-UA', {
             day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'
@@ -513,20 +568,44 @@ function renderHistoryCards(analyses) {
 
         const card = document.createElement('div');
         card.className = 'history-card';
+        // Додано кнопку видалення
         card.innerHTML = `
-            <div class="history-date">📅 ${date}</div>
+            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                <div class="history-date">📅 ${date}</div>
+                <button class="btn-delete-item" onclick="deleteAnalysisItem('${item._id}', event)" title="Видалити" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #ff6b6b; padding: 0 5px;">✖</button>
+            </div>
             <div class="history-status success">Оброблено</div>
-            <div style="font-size: 0.9rem; color: #555; text-decoration: underline;">Натисніть для деталей</div>
+            <div style="font-size: 0.9rem; color: #555; text-decoration: underline; margin-top: auto;">Натисніть для деталей</div>
         `;
         
-        // Додаємо обробник кліку на ВЕСЬ блок картки
         card.onclick = function() {
-            // alert('Клік по картці! Завантажую ID: ' + item._id); // Тимчасова перевірка
             openHistoryItem(item._id);
         };
         
         historyGrid.appendChild(card);
     });
+}
+
+// Функція видалення (додано)
+window.deleteAnalysisItem = async function(id, event) {
+    if (event) event.stopPropagation();
+
+    if (!confirm('Ви точно хочете видалити цей аналіз з історії?')) return;
+
+    try {
+        const res = await authFetch(`/api/analyses/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+            // Оновлюємо список
+            initHistoryGrid();
+            // Оновлюємо графіки
+            loadChartsData();
+        } else {
+            alert('Не вдалося видалити запис');
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Помилка видалення');
+    }
 }
 
 async function openHistoryItem(id) {
@@ -538,7 +617,7 @@ async function openHistoryItem(id) {
             skeleton.classList.remove('hidden');
             skeleton.scrollIntoView({ behavior: 'smooth' });
         }
-        if(resultSec) resultSec.classList.add('hidden'); // Ховаємо старий результат поки вантажимо новий
+        if(resultSec) resultSec.classList.add('hidden'); 
         
         console.log(`Запит деталей для ID: ${id}`);
         const res = await authFetch(`/api/analyses/${id}`);
@@ -547,18 +626,13 @@ async function openHistoryItem(id) {
         if(skeleton) skeleton.classList.add('hidden');
 
         if (res.ok) {
-            console.log('Дані отримано:', result.data);
-            
             displayResultWithNorms(result.data);
             
             if(resultSec) {
                 resultSec.classList.remove('hidden');
                 resultSec.scrollIntoView({ behavior: 'smooth' });
-            } else {
-                alert('Помилка: Не знайдено блок id="resultSection" в HTML!');
-            }
+            } 
         } else {
-            console.error('Помилка API:', result);
             alert('Не вдалося завантажити деталі: ' + (result.message || 'Помилка сервера'));
         }
     } catch (err) {
