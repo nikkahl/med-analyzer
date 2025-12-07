@@ -548,4 +548,103 @@ async function loadHistoryPage() {
             historyPage++;
         } else {
             if(historyPage === 1) {
-                historyGrid.innerHTML = '<p class="text-center" style="grid-column: 1/-1;">Історія поки що порожня.</p
+                historyGrid.innerHTML = '<p class="text-center" style="grid-column: 1/-1;">Історія поки що порожня.</p>';
+                loadMoreBtn.classList.add('hidden');
+            }
+        }
+    } catch (err) {
+        console.error('Помилка історії:', err);
+    }
+}
+
+function renderHistoryCards(analyses) {
+    analyses.forEach(item => {
+        const date = new Date(item.createdAt).toLocaleDateString('uk-UA', {
+            day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'
+        });
+
+        const card = document.createElement('div');
+        card.className = 'history-card';
+        
+        // ТУТ БУЛА ПОМИЛКА - ТЕПЕР МИ ДОДАЛИ КНОПКУ ВИДАЛЕННЯ
+        card.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                <div class="history-date">📅 ${date}</div>
+                <button class="btn-delete-item" onclick="deleteAnalysisItem('${item._id}', event)" title="Видалити" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #ff6b6b; padding: 0 5px;">✖</button>
+            </div>
+            <div class="history-status success">Оброблено</div>
+            <div style="font-size: 0.9rem; color: #555; text-decoration: underline; margin-top: auto;">Натисніть для деталей</div>
+        `;
+        
+        card.onclick = function() {
+            openHistoryItem(item._id);
+        };
+        
+        historyGrid.appendChild(card);
+    });
+}
+
+// ⚠️ ДОДАНО ПРОПУЩЕНУ ФУНКЦІЮ ВИДАЛЕННЯ
+window.deleteAnalysisItem = async function(id, event) {
+    if (event) event.stopPropagation(); // Щоб не відкривалась картка при кліку на хрестик
+
+    if (!confirm('Ви точно хочете видалити цей аналіз з історії?')) return;
+
+    try {
+        const res = await authFetch(`/api/analyses/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+            // Оновлюємо список
+            initHistoryGrid();
+            // Оновлюємо графіки
+            loadChartsData();
+        } else {
+            alert('Не вдалося видалити запис');
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Помилка видалення');
+    }
+}
+
+async function openHistoryItem(id) {
+    try {
+        const skeleton = document.getElementById('skeletonSection');
+        const resultSec = document.getElementById('resultSection');
+
+        if(skeleton) {
+            skeleton.classList.remove('hidden');
+            skeleton.scrollIntoView({ behavior: 'smooth' });
+        }
+        if(resultSec) resultSec.classList.add('hidden'); 
+        
+        console.log(`Запит деталей для ID: ${id}`);
+        const res = await authFetch(`/api/analyses/${id}`);
+        const result = await res.json();
+        
+        if(skeleton) skeleton.classList.add('hidden');
+
+        if (res.ok) {
+            displayResultWithNorms(result.data);
+            
+            if(resultSec) {
+                resultSec.classList.remove('hidden');
+                resultSec.scrollIntoView({ behavior: 'smooth' });
+            } 
+        } else {
+            alert('Не вдалося завантажити деталі: ' + (result.message || 'Помилка сервера'));
+        }
+    } catch (err) {
+        console.error('Помилка openHistoryItem:', err);
+        document.getElementById('skeletonSection')?.classList.add('hidden');
+        alert('Сталася помилка при відкритті: ' + err.message);
+    }
+}
+
+// ==========================================
+// 6. ІНІЦІАЛІЗАЦІЯ ПРИ ЗАПУСКУ
+// ==========================================
+
+if (token) {
+    loadChartsData(); 
+    initHistoryGrid(); 
+}
