@@ -1,11 +1,34 @@
-debugger; // Для відладки
+// ==========================================
+// 1. ГЛОБАЛЬНІ ЗМІННІ ТА АВТОРИЗАЦІЯ
+// ==========================================
 
 let myChart = null;
 let globalHistoryData = [];
+
 let cameraStream = null;
 let capturedPhotoBlob = null;
 let currentUploadMode = 'file';
+let currentAnalysisId = null; 
 
+let historyPage = 1;
+const historySection = document.getElementById('historySection');
+const historyGrid = document.getElementById('historyGrid');
+const loadMoreBtn = document.getElementById('loadMoreBtn');
+
+const token = localStorage.getItem('token');
+if (!token) window.location.href = 'index.html';
+
+const emailDisplay = document.getElementById('userEmailDisplay');
+if (emailDisplay) emailDisplay.innerText = localStorage.getItem('userEmail') || 'Користувач';
+
+const logoutBtn = document.getElementById('logoutBtn');
+if (logoutBtn) logoutBtn.addEventListener('click', forceLogout);
+
+function forceLogout() {
+    localStorage.removeItem('token');
+    localStorage.removeItem('userEmail');
+    window.location.href = 'index.html';
+}
 
 async function authFetch(url, options = {}) {
     const token = localStorage.getItem('token');
@@ -20,20 +43,9 @@ async function authFetch(url, options = {}) {
     return response;
 }
 
-function forceLogout() {
-    localStorage.removeItem('token');
-    localStorage.removeItem('userEmail');
-    window.location.href = 'index.html';
-}
-
-const token = localStorage.getItem('token');
-if (!token) window.location.href = 'index.html';
-
-const emailDisplay = document.getElementById('userEmailDisplay');
-if (emailDisplay) emailDisplay.innerText = 'Користувач';
-
-const logoutBtn = document.getElementById('logoutBtn');
-if (logoutBtn) logoutBtn.addEventListener('click', forceLogout);
+// ==========================================
+// 2. ЗАВАНТАЖЕННЯ ФАЙЛІВ ТА КАМЕРА
+// ==========================================
 
 const uploadForm = document.getElementById('uploadForm');
 const uploadBtn = document.getElementById('uploadBtn');
@@ -72,8 +84,8 @@ function switchMode(mode) {
         fileContainer.classList.add('hidden');
         
         if (!capturedPhotoBlob) {
-         startCameraBtn.classList.remove('hidden');
-         videoFeed.classList.add('hidden');
+            startCameraBtn.classList.remove('hidden');
+            videoFeed.classList.add('hidden');
         }
     }
     checkUploadReadiness();
@@ -150,24 +162,21 @@ if (uploadForm) {
         document.getElementById('skeletonSection').scrollIntoView({ behavior: 'smooth' });
 
         try {
-            const res = await authFetch('/api/analyses/upload', {
-                method: 'POST',
-                body: formData
-            });
+            const res = await authFetch('/api/analyses/upload', { method: 'POST', body: formData });
             const result = await res.json();
 
             document.getElementById('skeletonSection').classList.add('hidden');
 
             if (res.ok) {
                 displayResultWithNorms(result.data);
-                loadHistoryInitial();
+                loadChartsData(); 
+                initHistoryGrid();
                 resetUploadForm(); 
             } else {
                 throw new Error(result.message || 'Помилка');
             }
         } catch (err) {
             document.getElementById('skeletonSection').classList.add('hidden');
-
             if (err.message !== 'Сесія закінчилася. Увійдіть знову.') {
                 showStatus(err.message, 'error');
             }
@@ -180,29 +189,12 @@ if (uploadForm) {
 
 function resetUploadForm() {
     uploadForm.reset();
-    if (dropArea && dropArea.querySelector('.file-msg')) {
-        dropArea.querySelector('.file-msg').innerText = 'Перетягніть файл...';
-    }
-    
-    capturedPhotoBlob = null;
-    
-    if (photoPreview) {
-        photoPreview.classList.add('hidden');
-        photoPreview.src = '';
-    }
-    
+    if (dropArea && dropArea.querySelector('.file-msg')) dropArea.querySelector('.file-msg').innerText = 'Перетягніть файл...';
+    capturedPhotoBlob = null; 
+    if (photoPreview) { photoPreview.classList.add('hidden'); photoPreview.src = ''; }
     if (retakePhotoBtn) retakePhotoBtn.classList.add('hidden');
     if (startCameraBtn) startCameraBtn.classList.remove('hidden');
     if (videoFeed) videoFeed.classList.add('hidden');
-
-    if (typeof stopCamera === 'function') stopCamera();
-    if (typeof checkUploadReadiness === 'function') checkUploadReadiness();
-}
-function resetUploadForm() {
-    uploadForm.reset();
-    if (dropArea && dropArea.querySelector('.file-msg')) dropArea.querySelector('.file-msg').innerText = 'Перетягніть файл...';
-    capturedPhotoBlob = null; photoPreview.classList.add('hidden'); photoPreview.src = '';
-    retakePhotoBtn.classList.add('hidden'); startCameraBtn.classList.remove('hidden'); videoFeed.classList.add('hidden');
     stopCamera(); checkUploadReadiness();
 }
 
@@ -212,29 +204,43 @@ function showStatus(message, type) {
     uploadStatus.className = `status-message ${type}`;
     uploadStatus.classList.remove('hidden');
 }
-let currentAnalysisId = null; 
+
+// ==========================================
+// 3. ВІДОБРАЖЕННЯ РЕЗУЛЬТАТІВ ТА РЕДАГУВАННЯ
+// ==========================================
 
 function displayResultWithNorms(data) {
     const resultSection = document.getElementById('resultSection');
     const indicatorsList = document.getElementById('parsedIndicatorsList');
     const rawTextDisplay = document.getElementById('rawOcrTextDisplay');
     
-    if (!resultSection || !indicatorsList) return;
+    if (!resultSection || !indicatorsList) {
+        console.error("Не знайдено елементи DOM для відображення результату");
+        return;
+    }
     
     currentAnalysisId = data._id; 
-
     resultSection.classList.remove('hidden');
     indicatorsList.innerHTML = '';
 
-    if (!data.indicators || data.indicators.length === 0) {
-        indicatorsList.innerHTML = '<li style="padding:1rem; text-align:center;">Показників не знайдено.</li>';
+    let indicators = data.indicators;
+    if (!indicators || indicators.length === 0) {
+        indicators = data.parsedData || [];
+    }
+
+    if (indicators.length === 0) {
+        indicatorsList.innerHTML = '<li style="padding:1rem; text-align:center;">У цьому записі немає розпізнаних показників.</li>';
+        if (rawTextDisplay) rawTextDisplay.innerText = data.rawOcrText || '(Сирий текст відсутній)';
         return;
     }
 
-    data.indicators.forEach(ind => {
+    indicators.forEach(ind => {
+        if (!ind) return;
+
         const li = document.createElement('li');
         li.className = 'indicator-item';
-        li.id = `indicator-row-${ind._id}`; 
+        const rowId = ind._id || Math.random().toString(36).substr(2, 9);
+        li.id = `indicator-row-${rowId}`; 
 
         const val = parseFloat(ind.value);
         const min = parseFloat(ind.referenceMin);
@@ -244,31 +250,26 @@ function displayResultWithNorms(data) {
 
         li.innerHTML = `
             <div class="indicator-info">
-                <span class="indicator-name">${ind.name}</span>
+                <span class="indicator-name">${ind.name || 'Невідомий показник'}</span>
                 <span class="indicator-range">${statusInfo.rangeText} ${units}</span>
             </div>
             
             <div class="indicator-result">
-                <div class="view-mode" id="view-${ind._id}">
-                    <span class="value-text ${statusInfo.className}" id="val-text-${ind._id}">${ind.value} <small>${units}</small></span>
-                    ${statusInfo.text ? `<span class="status-badge ${statusInfo.className}" id="badge-${ind._id}">${statusInfo.text}</span>` : ''}
+                <div class="view-mode" id="view-${rowId}">
+                    <span class="value-text ${statusInfo.className}" id="val-text-${rowId}">${ind.value} <small>${units}</small></span>
+                    ${statusInfo.text ? `<span class="status-badge ${statusInfo.className}" id="badge-${rowId}">${statusInfo.text}</span>` : ''}
                     
                     <div class="edit-controls">
-                        <button onclick="enableEditMode('${ind._id}')" class="btn-icon-small" title="Редагувати">
-                            редагувати
-                        </button>
+                        ${ind._id ? `<button onclick="enableEditMode('${ind._id}')" class="btn-icon-small" title="Редагувати">редагувати</button>` : ''}
                     </div>
                 </div>
 
-                <div class="edit-mode hidden" id="edit-${ind._id}" style="display: flex; align-items: center; gap: 5px;">
-                    <input type="number" class="edit-input" id="input-${ind._id}" value="${ind.value}" step="0.1">
-                    <button onclick="saveIndicatorValue('${ind._id}')" class="btn-icon-small" style="color: green;" title="Зберегти">
-                        зберегти
-                    </button>
-                    <button onclick="cancelEditMode('${ind._id}')" class="btn-icon-small" style="color: red;" title="Скасувати">
-                        відмінити
-                    </button>
-                </div>
+                ${ind._id ? `
+                <div class="edit-mode hidden" id="edit-${rowId}" style="display: flex; align-items: center; gap: 5px;">
+                    <input type="number" class="edit-input" id="input-${rowId}" value="${ind.value}" step="0.1">
+                    <button onclick="saveIndicatorValue('${ind._id}')" class="btn-icon-small" style="color: green;" title="Зберегти">зберегти</button>
+                    <button onclick="cancelEditMode('${ind._id}')" class="btn-icon-small" style="color: red;" title="Скасувати">відмінити</button>
+                </div>` : ''}
             </div>
         `;
 
@@ -276,9 +277,11 @@ function displayResultWithNorms(data) {
     });
     
     if (rawTextDisplay) rawTextDisplay.innerText = data.rawOcrText || '';
-    resultSection.scrollIntoView({ behavior: 'smooth' });
+    
+    setTimeout(() => {
+        resultSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
 }
-
 function getStatusInfo(val, min, max) {
     const hasNorms = !isNaN(min) && !isNaN(max);
     if (!hasNorms) {
@@ -348,7 +351,7 @@ window.saveIndicatorValue = async function(id) {
             badge.className = `status-badge ${statusInfo.className}`;
         }
 
-        await loadHistoryInitial(); 
+        await loadChartsData(); 
         cancelEditMode(id);
 
     } catch (error) {
@@ -359,45 +362,32 @@ window.saveIndicatorValue = async function(id) {
     }
 }
 
-const historyListElement = document.getElementById('historyList');
+// ==========================================
+// 4. ГРАФІКИ ТА АНАЛІТИКА (Стара історія)
+// ==========================================
+
 const indicatorSelectElement = document.getElementById('indicatorSelect');
 
-async function loadHistoryInitial() {
-    if (!historyListElement || !indicatorSelectElement) return;
+async function loadChartsData() {
+    if (!indicatorSelectElement) return;
     try {
-        const res = await authFetch('/api/analyses/history');
+        const res = await authFetch('/api/analyses/history?limit=100'); 
         const responseData = await res.json();
-        if (!res.ok) throw new Error(responseData.message || 'Помилка історії');
         
-        globalHistoryData = responseData.data.sort((a, b) => new Date(a.analysisDate) - new Date(b.analysisDate));
+        if (!res.ok) return; 
+        
+        globalHistoryData = responseData.data.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
 
         if (globalHistoryData.length === 0) {
-            historyListElement.innerHTML = '<li>Історія порожня.</li>';
             indicatorSelectElement.innerHTML = '<option disabled selected>Дані відсутні</option>';
             renderChart([], [], 'Дані відсутні', null, null);
             return;
         }
 
-        renderHistoryList([...globalHistoryData].reverse());
         populateIndicatorSelect();
-
     } catch (err) {
-        if (err.message !== 'Сесія закінчилася. Увійдіть знову.') {
-            historyListElement.innerHTML = '<li>Не вдалося завантажити історію.</li>';
-            indicatorSelectElement.innerHTML = '<option disabled selected>Помилка завантаження</option>';
-            renderChart([], [], 'Помилка завантаження', null, null);
-        }
+        console.error("Chart load error:", err);
     }
-}
-
-function renderHistoryList(dataDesc) {
-    historyListElement.innerHTML = '';
-    dataDesc.forEach(item => {
-        const li = document.createElement('li');
-        const dateStr = new Date(item.analysisDate).toLocaleString('uk-UA', { dateStyle: 'short', timeStyle: 'short' });
-        li.innerText = `${dateStr} — Показників: ${item.indicators.length}`;
-        historyListElement.appendChild(li);
-    });
 }
 
 function populateIndicatorSelect() {
@@ -407,8 +397,8 @@ function populateIndicatorSelect() {
     });
     
     const uniqueIndicators = Array.from(allIndicatorsSet).sort();
-
     indicatorSelectElement.innerHTML = '';
+    
     if (uniqueIndicators.length === 0) {
          indicatorSelectElement.innerHTML = '<option disabled selected>Показників не знайдено</option>';
          renderChart([], [], 'Дані відсутні', null, null);
@@ -430,7 +420,7 @@ function updateChartFromSelection() {
     const selectedIndicatorName = indicatorSelectElement.value;
     if (!selectedIndicatorName) return;
 
-    const labels = globalHistoryData.map(item => new Date(item.analysisDate).toLocaleDateString('uk-UA', {day: '2-digit', month: '2-digit'}));
+    const labels = globalHistoryData.map(item => new Date(item.createdAt).toLocaleDateString('uk-UA', {day: '2-digit', month: '2-digit'}));
     const dataPoints = globalHistoryData.map(item => {
         const ind = item.indicators.find(i => i.name === selectedIndicatorName);
         return ind ? ind.value : null;
@@ -516,4 +506,113 @@ function renderChart(labels, data, title, refMin, refMax) {
     });
 }
 
-loadHistoryInitial();
+// ==========================================
+// 5. ІСТОРІЯ У ВИГЛЯДІ СІТКИ (Нова логіка)
+// ==========================================
+
+async function initHistoryGrid() {
+    if (!historySection) return;
+    
+    historyPage = 1;
+    historyGrid.innerHTML = ''; 
+    await loadHistoryPage();
+    historySection.classList.remove('hidden');
+}
+
+async function loadHistoryPage() {
+    try {
+        const res = await authFetch(`/api/analyses/history?page=${historyPage}`);
+        const result = await res.json();
+
+        if (result.data && result.data.length > 0) {
+            renderHistoryCards(result.data);
+            
+            if (historyPage < result.totalPages) {
+                loadMoreBtn.classList.remove('hidden');
+            } else {
+                loadMoreBtn.classList.add('hidden');
+            }
+            historyPage++;
+        } else {
+            if(historyPage === 1) {
+                historyGrid.innerHTML = '<p class="text-center" style="grid-column: 1/-1;">Історія поки що порожня.</p>';
+                loadMoreBtn.classList.add('hidden');
+            }
+        }
+    } catch (err) {
+        console.error('Помилка історії:', err);
+    }
+}
+
+function renderHistoryCards(analyses) {
+    historyGrid.innerHTML = ''; 
+    analyses.forEach(item => {
+        const date = new Date(item.createdAt).toLocaleDateString('uk-UA', {
+            day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'
+        });
+
+        const card = document.createElement('div');
+        card.className = 'history-card';
+        card.innerHTML = `
+            <div class="history-date">📅 ${date}</div>
+            <div class="history-status success">Оброблено</div>
+            <div style="font-size: 0.9rem; color: #555; text-decoration: underline;">Натисніть для деталей</div>
+        `;
+        
+        // Додаємо обробник кліку на ВЕСЬ блок картки
+        card.onclick = function() {
+            // alert('Клік по картці! Завантажую ID: ' + item._id); // Тимчасова перевірка
+            openHistoryItem(item._id);
+        };
+        
+        historyGrid.appendChild(card);
+    });
+}
+
+async function openHistoryItem(id) {
+    try {
+        const skeleton = document.getElementById('skeletonSection');
+        const resultSec = document.getElementById('resultSection');
+
+        if(skeleton) {
+            skeleton.classList.remove('hidden');
+            skeleton.scrollIntoView({ behavior: 'smooth' });
+        }
+        if(resultSec) resultSec.classList.add('hidden'); // Ховаємо старий результат поки вантажимо новий
+        
+        console.log(`Запит деталей для ID: ${id}`);
+        const res = await authFetch(`/api/analyses/${id}`);
+        const result = await res.json();
+        
+        if(skeleton) skeleton.classList.add('hidden');
+
+        if (res.ok) {
+            console.log('Дані отримано:', result.data);
+            
+            displayResultWithNorms(result.data);
+            
+            if(resultSec) {
+                resultSec.classList.remove('hidden');
+                resultSec.scrollIntoView({ behavior: 'smooth' });
+            } else {
+                alert('Помилка: Не знайдено блок id="resultSection" в HTML!');
+            }
+        } else {
+            console.error('Помилка API:', result);
+            alert('Не вдалося завантажити деталі: ' + (result.message || 'Помилка сервера'));
+        }
+    } catch (err) {
+        console.error('Помилка openHistoryItem:', err);
+        document.getElementById('skeletonSection')?.classList.add('hidden');
+        alert('Сталася помилка при відкритті: ' + err.message);
+    }
+}
+
+// ==========================================
+// 6. ІНІЦІАЛІЗАЦІЯ ПРИ ЗАПУСКУ
+// ==========================================
+
+if (token) {
+    loadChartsData(); 
+    initHistoryGrid(); 
+}

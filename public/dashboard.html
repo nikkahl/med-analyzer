@@ -100,15 +100,6 @@
                             <div class="skeleton skeleton-text sm" style="height: 20px;"></div>
                         </div>
                     </li>
-                     <li class="skeleton-item">
-                        <div>
-                            <div class="skeleton skeleton-text sm"></div>
-                            <div class="skeleton skeleton-text sub"></div>
-                        </div>
-                        <div class="skeleton-right">
-                            <div class="skeleton skeleton-text sm" style="height: 20px;"></div>
-                        </div>
-                    </li>
                 </ul>
             </div>
         </section>
@@ -129,7 +120,7 @@
             </div>
         </section>
 
-       <section class="card chart-card">
+        <section class="card chart-card">
             <div class="card-header">
                 <h3>Динаміка показників</h3>
             </div>
@@ -143,24 +134,29 @@
             <div class="chart-container">
                 <canvas id="mainChart"></canvas>
             </div>
-            <div class="history-list-container">
-                <h4>Історія завантажень</h4>
-                <ul id="historyList" class="history-list">
-                    <li>Завантаження історії...</li>
-                </ul>
+        </section>
+
+        <section id="historySection" class="section-container hidden">
+            <div class="section-header" style="margin-top: 30px; margin-bottom: 20px;">
+                <h2>Ваша історія аналізів</h2>
+                <p>Переглядайте попередні результати</p>
+            </div>
+        
+            <div id="historyGrid" class="history-grid">
+                </div>
+        
+            <div class="load-more-container">
+                <button id="loadMoreBtn" class="secondary-btn hidden">Завантажити ще</button>
             </div>
         </section>
+
     </main>
 
-    <script src="js/dashboard.js"></script>
-
-<footer class="app-footer">
+    <footer class="app-footer">
         <p>&copy; 2025 MedAnalyzer. Всі права захищено.</p>
         <p class="footer-sub">Зроблено для вас</p>
     </footer>
 
     <script src="js/dashboard.js"></script>
-</body>
-</html>
 </body>
 </html>
