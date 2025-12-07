@@ -214,14 +214,27 @@ function displayResultWithNorms(data) {
     const indicatorsList = document.getElementById('parsedIndicatorsList');
     const rawTextDisplay = document.getElementById('rawOcrTextDisplay');
     
+    const imageDisplay = document.getElementById('analysisImageDisplay');
+    const imageDetailsBlock = document.getElementById('imageDetailsBlock');
+    
     if (!resultSection || !indicatorsList) {
-        console.error("Не знайдено елементи DOM для відображення результату");
+        console.error("Не знайдено елементи DOM");
         return;
     }
     
     currentAnalysisId = data._id; 
     resultSection.classList.remove('hidden');
     indicatorsList.innerHTML = '';
+
+    if (imageDisplay && imageDetailsBlock) {
+        if (data.imageUrl) {
+            imageDisplay.src = data.imageUrl;
+            imageDetailsBlock.classList.remove('hidden');
+        } else {
+            imageDisplay.src = '';
+            imageDetailsBlock.classList.add('hidden');
+        }
+    }
 
     let indicators = data.indicators;
     if (!indicators || indicators.length === 0) {
@@ -230,13 +243,12 @@ function displayResultWithNorms(data) {
 
     if (indicators.length === 0) {
         indicatorsList.innerHTML = '<li style="padding:1rem; text-align:center;">У цьому записі немає розпізнаних показників.</li>';
-        if (rawTextDisplay) rawTextDisplay.innerText = data.rawOcrText || '(Сирий текст відсутній)';
+        if (rawTextDisplay) rawTextDisplay.innerText = data.rawOcrText || '';
         return;
     }
 
     indicators.forEach(ind => {
         if (!ind) return;
-
         const li = document.createElement('li');
         li.className = 'indicator-item';
         const rowId = ind._id || Math.random().toString(36).substr(2, 9);
@@ -258,21 +270,18 @@ function displayResultWithNorms(data) {
                 <div class="view-mode" id="view-${rowId}">
                     <span class="value-text ${statusInfo.className}" id="val-text-${rowId}">${ind.value} <small>${units}</small></span>
                     ${statusInfo.text ? `<span class="status-badge ${statusInfo.className}" id="badge-${rowId}">${statusInfo.text}</span>` : ''}
-                    
                     <div class="edit-controls">
                         ${ind._id ? `<button onclick="enableEditMode('${ind._id}')" class="btn-icon-small" title="Редагувати">редагувати</button>` : ''}
                     </div>
                 </div>
-
                 ${ind._id ? `
                 <div class="edit-mode hidden" id="edit-${rowId}" style="display: flex; align-items: center; gap: 5px;">
                     <input type="number" class="edit-input" id="input-${rowId}" value="${ind.value}" step="0.1">
-                    <button onclick="saveIndicatorValue('${ind._id}')" class="btn-icon-small" style="color: green;" title="Зберегти">зберегти</button>
-                    <button onclick="cancelEditMode('${ind._id}')" class="btn-icon-small" style="color: red;" title="Скасувати">відмінити</button>
+                    <button onclick="saveIndicatorValue('${ind._id}')" class="btn-icon-small" style="color: green;">зберегти</button>
+                    <button onclick="cancelEditMode('${ind._id}')" class="btn-icon-small" style="color: red;">відмінити</button>
                 </div>` : ''}
             </div>
         `;
-
         indicatorsList.appendChild(li);
     });
     
@@ -282,6 +291,7 @@ function displayResultWithNorms(data) {
         resultSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 100);
 }
+
 function getStatusInfo(val, min, max) {
     const hasNorms = !isNaN(min) && !isNaN(max);
     if (!hasNorms) {

@@ -113,7 +113,13 @@
                 <ul id="parsedIndicatorsList" class="indicators-list">
                 </ul>
                 
-                <details class="raw-text-details">
+                <details class="raw-text-details" id="imageDetailsBlock" style="margin-top: 1rem;">
+                    <summary>Показати оригінальне фото</summary>
+                    <div style="margin-top: 10px; text-align: center;">
+                        <img id="analysisImageDisplay" src="" alt="Фото аналізу" style="max-width: 100%; border-radius: 8px; border: 1px solid #eee;">
+                    </div>
+                </details>
+                <details class="raw-text-details" style="margin-top: 0.5rem;">
                     <summary>Показати сирий текст OCR</summary>
                     <pre id="rawOcrTextDisplay"></pre>
                 </details>
