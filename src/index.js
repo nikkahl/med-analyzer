@@ -1,8 +1,8 @@
-// src/index.js
-
-import 'dotenv/config'; 
+import 'dotenv/config';
 import express from 'express';
-import logger from './logger.js'; 
+import path from 'path'; 
+import { fileURLToPath } from 'url'; 
+import logger from './logger.js';
 import connectDB from './config/db.js';
 import apiRoutes from './routes/index.js';
 import analysisRoutes from './routes/analysis.routes.js';
@@ -10,6 +10,7 @@ import indicatorRoutes from './routes/indicator.routes.js';
 import ParserService from './services/parser.service.js';
 
 const { PORT, MONGO_URI } = process.env;
+
 if (!PORT || !MONGO_URI) {
   logger.log({
     level: 'error',
@@ -18,14 +19,21 @@ if (!PORT || !MONGO_URI) {
   process.exit(1);
 }
 
-connectDB(); 
+connectDB();
 const app = express();
-app.use(express.json()); 
+app.use(express.json());
 
-app.use(express.static('public'));
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+app.use(express.static(path.join(__dirname, '../public')));
 
 app.get('/', (req, res) => {
- res.sendFile('index.html', { root: 'public' });
+  res.sendFile(path.join(__dirname, '../public/index.html'));
+});
+
+app.get('/dashboard.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/dashboard.html'));
 });
 
 app.use('/api', apiRoutes);

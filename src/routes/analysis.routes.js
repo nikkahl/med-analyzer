@@ -4,7 +4,6 @@ import authMiddleware from '../middleware/auth.middleware.js';
 import AnalysisController from '../controllers/analysis.controller.js';
 
 const router = Router();
-
 const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
@@ -35,6 +34,12 @@ router.get(
   '/history',
   authMiddleware,
   AnalysisController.getHistory
+);
+
+router.patch(
+  '/:analysisId/indicators/:indicatorId',
+  authMiddleware,
+  AnalysisController.updateIndicator
 );
 
 export default router;

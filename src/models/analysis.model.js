@@ -2,14 +2,16 @@ import mongoose from 'mongoose';
 const { Schema } = mongoose;
 
 const indicatorResultSchema = new Schema({
-  dictionaryId: { // [cite: 97]
-    type: Schema.Types.ObjectId,
-    ref: 'Indicator',
-    required: true,
+      dictionaryId: { 
+   type: Schema.Types.ObjectId,
+   ref: 'Indicator',
+  required: true,
   },
-  name: { type: String, required: true }, // [cite: 98]
-  value: { type: Number, required: true }, // [cite: 99]
-  units: { type: String, required: true }, // [cite: 100]
+  name: { type: String, required: true }, 
+  value: { type: Number, required: true }, 
+  units: { type: String, required: true }, 
+    referenceMin: { type: Number, default: null },
+  referenceMax: { type: Number, default: null },
 });
 
 const analysisSchema = new Schema({
@@ -19,26 +21,26 @@ const analysisSchema = new Schema({
     required: true,
     index: true, 
   },
-  analysisDate: { // [cite: 92]
+  analysisDate: { 
     type: Date,
     default: Date.now, 
   },
-  originalFilePath: { // [cite: 93]
+  originalFilePath: { 
     type: String,
     required: false, 
   },
-  rawOcrText: { // [cite: 94]
+  rawOcrText: { 
     type: String,
     required: true,
   },
-  isVerified: { // [cite: 95]
+  isVerified: { 
     type: Boolean,
     default: false, 
   },
-  indicators: [indicatorResultSchema], // [cite: 96]
+  indicators: [indicatorResultSchema], 
 
 }, {
-  timestamps: true, // Додає createdAt [cite: 101]
+  timestamps: true, 
 });
 
 const Analysis = mongoose.model('Analysis', analysisSchema);

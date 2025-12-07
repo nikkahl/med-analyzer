@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MedAnalyzer - Особистий кабінет</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="dashboard-body">
+    <nav class="navbar">
+        <div class="nav-brand">MedAnalyzer</div>
+        <div class="nav-user">
+            <span id="userEmailDisplay">Користувач</span>
+            <button id="logoutBtn" class="btn-outline">Вийти</button>
+        </div>
+    </nav>
+
+    <main class="dashboard-container fade-in">
+        
+        <section class="card upload-card">
+            <div class="card-header">
+                <h3>Новий аналіз</h3>
+            </div>
+            
+            <div class="upload-mode-switch">
+                <button type="button" class="btn-mode active" id="modeFileBtn">Файл</button>
+                <button type="button" class="btn-mode" id="modeCameraBtn">Камера</button>
+            </div>
+
+            <form id="uploadForm">
+                <div id="fileUploadContainer">
+                    <div class="file-drop-area" id="dropArea">
+                        <span class="file-msg">Перетягніть файл сюди або натисніть для вибору (JPG, PNG)</span>
+                        <input type="file" id="analysisFile" accept="image/png, image/jpeg">
+                    </div>
+                </div>
+
+            <div id="cameraUploadContainer" class="hidden">
+                    <video id="cameraFeed" autoplay playsinline class="hidden"></video>
+                    <canvas id="cameraCanvas" class="hidden"></canvas>
+                    <img id="capturedImagePreview" class="hidden">
+                    
+                    <div class="camera-controls">
+                        <div type="button" id="startCameraBtn" class="camera-zone-btn">
+                            <div class="camera-icon-wrapper">
+                                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                                    <circle cx="12" cy="13" r="4"></circle>
+                                </svg>
+                            </div>
+                            
+                            <span class="camera-title">Увімкнути камеру</span>
+                            <span class="camera-desc">Натисніть тут, щоб надати доступ до камери та зробити чітке фото аналізу.</span>
+                        </div>
+                        
+                        <button type="button" id="takePhotoBtn" class="btn-primary hidden" style="width: 100%; margin-top: 15px; padding: 15px;">📸 Зробити фото</button>
+                        <button type="button" id="retakePhotoBtn" class="btn-outline hidden" style="width: 100%; margin-top: 10px;">🔄 Перезняти</button>
+                    </div>
+                    <p id="cameraError" class="error-text hidden"></p>
+                </div>
+
+
+                <div id="uploadStatus" class="status-message hidden"></div>
+                
+                <button type="submit" class="btn-primary main-submit-btn" id="uploadBtn" disabled>Розпізнати та Зберегти</button>
+            </form>
+        </section>
+
+        <section class="card result-card hidden" id="resultSection">
+            <div class="card-header">
+                <h3>Результат розпізнавання</h3>
+            </div>
+            <div class="result-content">
+                <h4>Знайдені показники:</h4>
+                <ul id="parsedIndicatorsList" class="indicators-list">
+                </ul>
+                
+                <details class="raw-text-details">
+                    <summary>Показати сирий текст OCR</summary>
+                    <pre id="rawOcrTextDisplay"></pre>
+                </details>
+            </div>
+        </section>
+
+       <section class="card chart-card">
+            <div class="card-header">
+                <h3>Динаміка показників</h3>
+            </div>
+            
+            <div class="chart-controls">
+                <label for="indicatorSelect">Оберіть показник:</label>
+                <select id="indicatorSelect" class="form-select">
+                    <option value="" disabled selected>Завантаження списку...</option>
+                </select>
+            </div>
+            <div class="chart-container">
+                <canvas id="mainChart"></canvas>
+            </div>
+            <div class="history-list-container">
+                <h4>Історія завантажень</h4>
+                <ul id="historyList" class="history-list">
+                    <li>Завантаження історії...</li>
+                </ul>
+            </div>
+        </section>
+    </main>
+
+    <script src="js/dashboard.js"></script>
+
+<footer class="app-footer">
+        <p>&copy; 2025 MedAnalyzer. Всі права захищено.</p>
+        <p class="footer-sub">Зроблено для вас</p>
+    </footer>
+
+    <script src="js/dashboard.js"></script>
+</body>
+</html>
+</body>
+</html>
