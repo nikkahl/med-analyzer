@@ -42,4 +42,10 @@ router.patch(
   AnalysisController.updateIndicator
 );
 
+router.get(
+    '/:id', 
+    authMiddleware, 
+    AnalysisController.getAnalysisById
+); 
+
 export default router;

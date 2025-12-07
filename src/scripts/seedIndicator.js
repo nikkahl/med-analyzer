@@ -10,7 +10,7 @@ const indicatorsToSeed = [
   {
     name: 'Гемоглобін',
     units: 'г/л',
-    aliases: ['HGB', 'Hb', 'Hemoglobin', 'Hgb', 'гемоглобін'],
+    aliases: ['HGB', 'Hb', 'Hemoglobin', 'Hgb', 'гемоглобін', 'Гемоглобіні'],
     referenceMin: 120,
     referenceMax: 160,
   },

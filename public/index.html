@@ -3,12 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MedAnalyzer - Вхід до системи</title>
+    <title>MedAnalyzer - Головна</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
+    <style>
+        .hidden { display: none !important; }
+        
+        #mainApp {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+    </style>
 </head>
 <body>
-    <div class="split-screen-container">
+
+    <div class="split-screen-container" id="authSection">
         <div class="brand-side">
             <div class="brand-content">
                 <h1>MedAnalyzer</h1>
@@ -46,7 +56,7 @@
                 </form>
 
                 <form id="registerForm" class="auth-form hidden fade-in">
-                     <div class="form-header">
+                      <div class="form-header">
                         <h2>Створення акаунту</h2>
                         <p class="subtitle">Зареєструйтесь для початку роботи з системою.</p>
                     </div>
@@ -70,6 +80,43 @@
             </div>
         </div>
     </div>
+
+    <main id="mainApp" class="hidden">
+        
+        <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <h2>MedAnalyzer Dashboard</h2>
+            <button onclick="logout()" class="secondary-btn" style="padding: 8px 16px;">Вийти</button>
+        </header>
+
+        <div id="uploadSectionPlaceholder">
+            </div>
+
+        <div id="skeletonSection" class="hidden">
+            <p>Обробка даних...</p>
+        </div>
+
+        <div id="resultSection" class="hidden">
+            </div>
+
+
+        <hr style="margin: 3rem 0; border: 0; border-top: 1px solid #eee;">
+        
+        <section id="historySection" class="section-container hidden">
+            <div class="section-header">
+                <h2>Ваша історія аналізів</h2>
+                <p>Переглядайте попередні результати</p>
+            </div>
+        
+            <div id="historyGrid" class="history-grid">
+                </div>
+        
+            <div class="load-more-container">
+                <button id="loadMoreBtn" class="secondary-btn hidden">Завантажити ще</button>
+            </div>
+        </section>
+
+    </main>
+
     <script src="js/auth.js"></script>
-</body>
+    <script src="js/script.js"></script> </body>
 </html>

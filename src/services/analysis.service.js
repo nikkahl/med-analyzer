@@ -5,28 +5,33 @@ import logger from '../logger.js';
 
 class AnalysisService {
   /**
-   * @param {string} userId - ID 
-   * @param {Object} data - Дані 
+   * @param {string} userId - ID користувача
+   * @param {Object} data - Дані аналізу
    * @returns {Promise<Document>} 
    */
   async create(userId, data) {
     try {
-      const { rawOcrText, parsedData, originalFilePath} = data;
+      const { rawOcrText, parsedData, originalFilePath } = data;
       const anonymizedText = anonymizeRawText(rawOcrText);
+
+      // ВИПРАВЛЕНО: Використовуємо поле 'user' замість 'userId', щоб відповідало Моделі
       const newAnalysis = new Analysis({
-        userId,
-        originalFilePath,
-        rawOcrText: anonymizedText, 
+        user: userId, 
+        originalFilePath: originalFilePath,
+        rawOcrText: anonymizedText,
+        // Зберігаємо розпарсені дані і в indicators (для Mongoose схеми), і в parsedData (як резерв)
         indicators: parsedData,
+        parsedData: parsedData 
       });
 
-      await newAnalysis.save();
-      logger.info(`New analysis saved for user ${userId}`);
-      return newAnalysis;
+      const savedDoc = await newAnalysis.save();
+      logger.info(`New analysis saved for user ${userId}. ID: ${savedDoc._id}`);
+      return savedDoc;
 
     } catch (error) {
       logger.error('Error saving analysis to database', error);
-      throw new Error('Could not save analysis.');
+      // Важливо кинути помилку далі, щоб контролер знав про неї
+      throw error; 
     }
   }
 
@@ -37,7 +42,8 @@ class AnalysisService {
    */
   async getAllForUser(userId) {
     try {
-      const analyses = await Analysis.find({ userId }).sort({ createdAt: -1 });
+      // ВИПРАВЛЕНО: Шукаємо по полю 'user', а не 'userId'
+      const analyses = await Analysis.find({ user: userId }).sort({ createdAt: -1 });
       return analyses;
     } catch (error) {
       logger.error(`Error fetching analyses for user ${userId}`, error);
@@ -45,12 +51,12 @@ class AnalysisService {
     }
   }
 
-
   async updateIndicatorValue(analysisId, indicatorId, newValue) {
     try {
       const analysis = await Analysis.findById(analysisId);
       if (!analysis) throw new Error('Analysis not found');
 
+      // Mongoose метод .id() шукає в масиві сабдокументів
       const indicator = analysis.indicators.id(indicatorId);
       if (!indicator) throw new Error('Indicator not found');
 

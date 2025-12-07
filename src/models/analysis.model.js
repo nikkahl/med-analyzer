@@ -2,20 +2,20 @@ import mongoose from 'mongoose';
 const { Schema } = mongoose;
 
 const indicatorResultSchema = new Schema({
-      dictionaryId: { 
-   type: Schema.Types.ObjectId,
-   ref: 'Indicator',
-  required: true,
+  dictionaryId: { 
+    type: Schema.Types.ObjectId,
+    ref: 'Indicator',
+    required: false, 
   },
   name: { type: String, required: true }, 
   value: { type: Number, required: true }, 
-  units: { type: String, required: true }, 
-    referenceMin: { type: Number, default: null },
+  units: { type: String, required: false }, 
+  referenceMin: { type: Number, default: null },
   referenceMax: { type: Number, default: null },
 });
 
 const analysisSchema = new Schema({
-  userId: {
+  user: {
     type: Schema.Types.ObjectId,
     ref: 'User',
     required: true,
@@ -31,7 +31,12 @@ const analysisSchema = new Schema({
   },
   rawOcrText: { 
     type: String,
-    required: true,
+    required: false, 
+  },
+  
+  parsedData: {
+      type: Schema.Types.Mixed, 
+      default: []
   },
   isVerified: { 
     type: Boolean,

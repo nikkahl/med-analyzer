@@ -1,104 +1,117 @@
+// ==========================================
+// 1. ПЕРЕВІРКА АВТОРИЗАЦІЇ ПРИ ЗАВАНТАЖЕННІ
+// ==========================================
+
+if (localStorage.getItem('token')) {
+    window.location.href = 'dashboard.html';
+}
+
+// ==========================================
+// 2. DOM
+// ==========================================
 
 const loginForm = document.getElementById('loginForm');
 const registerForm = document.getElementById('registerForm');
 const showRegisterBtn = document.getElementById('showRegister');
 const showLoginBtn = document.getElementById('showLogin');
 
-showRegisterBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    loginForm.classList.add('hidden');
-    registerForm.classList.remove('hidden');
-});
+// ==========================================
+// 3. ПЕРЕМИКАННЯ МІЖ ВХОДОМ І РЕЄСТРАЦІЄЮ
+// ==========================================
 
-showLoginBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    registerForm.classList.add('hidden');
-    loginForm.classList.remove('hidden');
-});
+if (showRegisterBtn) {
+    showRegisterBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        loginForm.classList.add('hidden');
+        registerForm.classList.remove('hidden');
+    });
+}
 
+if (showLoginBtn) {
+    showLoginBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        registerForm.classList.add('hidden');
+        loginForm.classList.remove('hidden');
+    });
+}
 
-loginForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const email = document.getElementById('loginEmail').value;
-    const password = document.getElementById('loginPassword').value;
+// ==========================================
+// 4. ЛОГІКА ВХОДУ (LOGIN)
+// ==========================================
 
-    try {
-        const res = await fetch('/api/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password })
-        });
+if (loginForm) {
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('loginEmail').value;
+        const password = document.getElementById('loginPassword').value;
 
-        const data = await res.json();
+        try {
+            const res = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
 
-        if (res.ok) {
-            let tokenToSave = null;
-            
-            if (data.token && typeof data.token === 'string') {
-                tokenToSave = data.token;
-            } 
-            else if (data.data && data.data.token && typeof data.data.token === 'string') {
-                tokenToSave = data.data.token;
-            }
+            const data = await res.json();
 
-            if (tokenToSave) {
-                localStorage.setItem('token', tokenToSave);
-                localStorage.setItem('userEmail', email); 
-                
-                setTimeout(() => {
+            if (res.ok) {
+                let tokenToSave = data.token || (data.data && data.data.token);
+
+                if (tokenToSave) {
+                    localStorage.setItem('token', tokenToSave);
+                    localStorage.setItem('userEmail', email);
+                    
                     window.location.href = 'dashboard.html';
-                }, 300);
-
+                } else {
+                    alert('Помилка: Сервер не надіслав токен.');
+                }
             } else {
-                console.error('⛔ ПОМИЛКА: Сервер не надіслав токен у відповіді!', data);
-                alert('Помилка входу: Сервер не надав ключ доступу. Спробуйте пізніше.');
+                alert(data.message || 'Помилка входу');
             }
-
-        } else {
-            alert(data.message || 'Помилка входу');
+        } catch (err) {
+            console.error('Login error:', err);
+            alert('Помилка з\'єднання з сервером');
         }
-    } catch (err) {
-        console.error('⛔ Помилка мережі або сервера:', err);
-        alert('Щось пішло не так. Перевірте з\'єднання.');
-    }
-});
+    });
+}
 
+// ==========================================
+// 5. REGISTER
+// ==========================================
 
-registerForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const email = document.getElementById('regEmail').value;
-    const password = document.getElementById('regPassword').value;
+if (registerForm) {
+    registerForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('regEmail').value;
+        const password = document.getElementById('regPassword').value;
 
-try {
-        const res = await fetch('/api/auth/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password })
-        });
+        try {
+            const res = await fetch('/api/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
 
-        const data = await res.json();
+            const data = await res.json();
 
         if (res.ok) {
-             let tokenToSave = null;
-             if (data.token && typeof data.token === 'string') {
-                 tokenToSave = data.token;
-             } else if (data.data && data.data.token && typeof data.data.token === 'string') {
-                 tokenToSave = data.data.token;
-             }
- 
-             if (tokenToSave) {
-                localStorage.setItem('token', tokenToSave);
-                localStorage.setItem('userEmail', email);
-                setTimeout(() => { window.location.href = 'dashboard.html'; }, 300);
-             } else {
-                console.error('⛔ ПОМИЛКА РЕЄСТРАЦІЇ: Немає токена!', data);
-                alert('Реєстрація успішна, але виникла помилка авторитації. Спробуйте увійти.');
-             }
-        } else {
-            alert(data.message || 'Помилка реєстрації');
+                let tokenToSave = data.token || (data.data && data.data.token);
+
+                if (tokenToSave) {
+                    localStorage.setItem('token', tokenToSave);
+                    localStorage.setItem('userEmail', email);
+                    window.location.href = 'dashboard.html';
+                } else {
+                    alert('Реєстрація успішна! Будь ласка, увійдіть.');
+                    registerForm.classList.add('hidden');
+                    loginForm.classList.remove('hidden');
+                }
+            } else {
+                alert(data.message || 'Помилка реєстрації');
+            }
+        } catch (err) {
+            console.error('Register error:', err);
+            alert('Помилка з\'єднання з сервером');
         }
-    } catch (err) {
-        console.error('⛔ Помилка сервера:', err);
-        alert('Помилка сервера');
-    }
-});
+    });
+}

@@ -25,7 +25,7 @@ class ParserService {
     const lowerCaseText = rawText.toLowerCase();
 
     for (const indicator of this.dictionary) {
-    const searchTerms = [indicator.name.toLowerCase(), ...indicator.aliases.map(a => a.toLowerCase())];
+      const searchTerms = [indicator.name.toLowerCase(), ...indicator.aliases.map(a => a.toLowerCase())];
 
       for (const term of searchTerms) {
         if (lowerCaseText.includes(term)) {
@@ -55,22 +55,31 @@ class ParserService {
 
       const startIndex = termIndex + term.length;
       let searchSlice = text.substring(startIndex, startIndex + 50);
-        searchSlice = searchSlice.replace(/\d+[.,]?\d*\s*-\s*\d+[.,]?\d*/g, " ");
 
-      
-      const regex = /(?<!\w)(\d+[.,]?\d*)(?!\w)/;
+     
+      const newlineIndex = searchSlice.indexOf('\n');
+      if (newlineIndex !== -1) {
+          searchSlice = searchSlice.substring(0, newlineIndex);
+      }
+      searchSlice = searchSlice.replace(/(\d)([a-zа-я%])/g, '$1 $2');
+      searchSlice = searchSlice.replace(/\d+[.,]?\d*\s*[-–]\s*\d+[.,]?\d*/g, " ");
+
+      const regex = /(?<!\d)(\d+[.,]?\d*)/;
       const match = searchSlice.match(regex);
 
       if (match && match[1]) {
         const numericString = match[1].replace(',', '.');
-        return parseFloat(numericString);
+        const result = parseFloat(numericString);
+        
+        return isNaN(result) ? null : result;
       }
 
       return null; 
     } catch (error) {
+      logger.error('Error extracting value:', error);
       return null;
     }
   }
 }
 
-    export default new ParserService();
+export default new ParserService();
