@@ -133,6 +133,7 @@ if (uploadForm) {
     uploadForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const formData = new FormData();
+
         if (currentUploadMode === 'file') {
             if (fileInput.files.length === 0) return;
             formData.append('analysisImage', fileInput.files[0]);
@@ -142,23 +143,61 @@ if (uploadForm) {
         }
 
         uploadBtn.disabled = true;
-        showStatus('Обробка та розпізнавання...', 'loading');
+        document.getElementById('resultSection').classList.add('hidden');
+        document.getElementById('skeletonSection').classList.remove('hidden');
+        if (uploadStatus) uploadStatus.classList.add('hidden');
+
+        document.getElementById('skeletonSection').scrollIntoView({ behavior: 'smooth' });
 
         try {
-            const res = await authFetch('/api/analyses/upload', { method: 'POST', body: formData });
+            const res = await authFetch('/api/analyses/upload', {
+                method: 'POST',
+                body: formData
+            });
             const result = await res.json();
+
+            document.getElementById('skeletonSection').classList.add('hidden');
+
             if (res.ok) {
-                showStatus('Успішно!', 'success');
                 displayResultWithNorms(result.data);
                 loadHistoryInitial();
-                resetUploadForm();
-            } else { throw new Error(result.message || 'Помилка'); }
+                resetUploadForm(); 
+            } else {
+                throw new Error(result.message || 'Помилка');
+            }
         } catch (err) {
-            if (err.message !== 'Сесія закінчилася. Увійдіть знову.') showStatus(err.message, 'error');
-        } finally { uploadBtn.disabled = false; checkUploadReadiness(); }
-    });
+            document.getElementById('skeletonSection').classList.add('hidden');
+
+            if (err.message !== 'Сесія закінчилася. Увійдіть знову.') {
+                showStatus(err.message, 'error');
+            }
+        } finally {
+            uploadBtn.disabled = false;
+            checkUploadReadiness();
+        }
+    }); 
 }
 
+function resetUploadForm() {
+    uploadForm.reset();
+    if (dropArea && dropArea.querySelector('.file-msg')) {
+        dropArea.querySelector('.file-msg').innerText = 'Перетягніть файл...';
+    }
+    
+    capturedPhotoBlob = null;
+    
+    if (photoPreview) {
+        photoPreview.classList.add('hidden');
+        photoPreview.src = '';
+    }
+    
+    if (retakePhotoBtn) retakePhotoBtn.classList.add('hidden');
+    if (startCameraBtn) startCameraBtn.classList.remove('hidden');
+    if (videoFeed) videoFeed.classList.add('hidden');
+
+    if (typeof stopCamera === 'function') stopCamera();
+    if (typeof checkUploadReadiness === 'function') checkUploadReadiness();
+}
 function resetUploadForm() {
     uploadForm.reset();
     if (dropArea && dropArea.querySelector('.file-msg')) dropArea.querySelector('.file-msg').innerText = 'Перетягніть файл...';
