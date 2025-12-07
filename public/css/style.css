@@ -794,3 +794,31 @@ body.dashboard-body {
     text-align: center;
     margin-top: 2rem;
 }
+
+/* =========================================
+   МОБІЛЬНИЙ ДОДАТОК
+   ========================================= */
+
+@media screen and (max-width: 768px) {
+    body, html {
+        height: auto !important; 
+        overflow-y: auto !important; 
+    }
+
+    .split-screen-container, 
+    .dashboard-container {
+        height: auto !important;
+        min-height: 100vh; 
+        overflow-y: visible !important;
+        display: block; 
+    }
+    .card {
+        max-height: none !important;
+        overflow: visible !important;
+        margin-bottom: 20px;
+    }
+    .app-footer {
+        position: relative;
+        margin-top: 30px;
+    }
+}

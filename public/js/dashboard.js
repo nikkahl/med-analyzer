@@ -381,12 +381,14 @@ const indicatorSelectElement = document.getElementById('indicatorSelect');
 async function loadChartsData() {
     if (!indicatorSelectElement) return;
     try {
-        const res = await authFetch('/api/analyses/history?limit=100'); 
+        const res = await authFetch('/api/analyses/history?limit=20'); 
         const responseData = await res.json();
         
-        if (!res.ok) return; 
+        if (!res.ok) return;
         
         globalHistoryData = responseData.data.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+
+        console.log("Дані для графіків завантажено:", globalHistoryData); // ДЕБАГ
 
         if (globalHistoryData.length === 0) {
             indicatorSelectElement.innerHTML = '<option disabled selected>Дані відсутні</option>';
@@ -396,17 +398,26 @@ async function loadChartsData() {
 
         populateIndicatorSelect();
     } catch (err) {
-        console.error("Chart load error:", err);
+        console.error("Помилка графіків:", err);
     }
 }
 
 function populateIndicatorSelect() {
     const allIndicatorsSet = new Set();
+
     globalHistoryData.forEach(analysis => {
-        analysis.indicators.forEach(ind => allIndicatorsSet.add(ind.name));
+        const indicators = analysis.indicators || analysis.parsedData || [];
+        
+        indicators.forEach(ind => {
+            if (ind && ind.name) {
+                allIndicatorsSet.add(ind.name.trim());
+            }
+        });
     });
     
     const uniqueIndicators = Array.from(allIndicatorsSet).sort();
+    console.log("Знайдені показники:", uniqueIndicators); // ДЕБАГ
+
     indicatorSelectElement.innerHTML = '';
     
     if (uniqueIndicators.length === 0) {
@@ -430,90 +441,29 @@ function updateChartFromSelection() {
     const selectedIndicatorName = indicatorSelectElement.value;
     if (!selectedIndicatorName) return;
 
-    const labels = globalHistoryData.map(item => new Date(item.createdAt).toLocaleDateString('uk-UA', {day: '2-digit', month: '2-digit'}));
-    const dataPoints = globalHistoryData.map(item => {
-        const ind = item.indicators.find(i => i.name === selectedIndicatorName);
-        return ind ? ind.value : null;
-    });
-
+    const labels = [];
+    const dataPoints = [];
     let units = '';
     let refMin = null;
     let refMax = null;
 
-    for (const item of globalHistoryData) {
-        const ind = item.indicators.find(i => i.name === selectedIndicatorName);
-        if (ind) { 
-            units = ind.units;
-            refMin = parseFloat(ind.referenceMin);
-            refMax = parseFloat(ind.referenceMax);
-            break; 
+    globalHistoryData.forEach(item => {
+        const indicators = item.indicators || item.parsedData || [];
+        const ind = indicators.find(i => i.name && i.name.trim() === selectedIndicatorName);
+        
+        if (ind) {
+            const dateLabel = new Date(item.createdAt).toLocaleDateString('uk-UA', {day: '2-digit', month: '2-digit'});
+            labels.push(dateLabel);
+            dataPoints.push(ind.value);
+            
+            if (!units) units = ind.units;
+            if (refMin === null) refMin = parseFloat(ind.referenceMin);
+            if (refMax === null) refMax = parseFloat(ind.referenceMax);
         }
-    }
+    });
     
     const titleUnitPart = units ? ` (${units})` : '';
     renderChart(labels, dataPoints, `${selectedIndicatorName}${titleUnitPart}`, refMin, refMax);
-}
-
-if (indicatorSelectElement) {
-    indicatorSelectElement.addEventListener('change', updateChartFromSelection);
-}
-
-function renderChart(labels, data, title, refMin, refMax) {
-    const ctx = document.getElementById('mainChart'); 
-    if (!ctx) return;
-    if (myChart) myChart.destroy();
-
-    const primaryColor = '#2563eb';
-    const dangerColor = '#dc2626';
-
-    myChart = new Chart(ctx.getContext('2d'), {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: title || 'Показник',
-                data: data,
-                borderColor: primaryColor, 
-                backgroundColor: 'rgba(37, 99, 235, 0.1)',
-                borderWidth: 2, 
-                tension: 0.1,
-                fill: true,
-                pointBackgroundColor: (context) => {
-                    const value = context.raw;
-                    if (value !== null && !isNaN(refMin) && !isNaN(refMax)) {
-                        if (value < refMin || value > refMax) return dangerColor;
-                    }
-                    return primaryColor;
-                },
-                pointBorderColor: '#fff',
-                pointRadius: 6,
-                pointHoverRadius: 8
-            }]
-        },
-        options: { 
-            responsive: true, 
-            maintainAspectRatio: false, 
-            plugins: { 
-                legend: { display: true, labels: { font: { size: 14, weight: 'bold' } } },
-                tooltip: {
-                    mode: 'index',
-                    intersect: false,
-                    callbacks: {
-                        afterLabel: (context) => {
-                            if (!isNaN(refMin) && !isNaN(refMax)) {
-                                return ` (Норма: ${refMin} - ${refMax})`;
-                            }
-                            return '';
-                        }
-                    }
-                }
-            }, 
-            scales: { 
-                y: { beginAtZero: false },
-                x: { title: { display: true, text: 'Дата' } } 
-            } 
-        }
-    });
 }
 
 // ==========================================
