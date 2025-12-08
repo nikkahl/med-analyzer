@@ -42,7 +42,6 @@ router.patch(
   AnalysisController.updateIndicator
 );
 
-// Маршрут для видалення
 router.delete(
   '/:id',
   authMiddleware,
