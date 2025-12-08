@@ -148,6 +148,20 @@ class AnalysisController {
         return res.status(500).json({ message: 'Помилка сервера при видаленні' });
     }
   }
+  async deleteAnalysis(req, res) {
+    try {
+        const { id } = req.params;
+        const userId = req.user._id || req.user.id;
+        const deletedAnalysis = await Analysis.findOneAndDelete({ _id: id, user: userId });
+        if (!deletedAnalysis) {
+            return res.status(404).json({ message: 'Аналіз не знайдено' });
+        }
+        return res.status(200).json({ message: 'Аналіз успішно видалено' });
+    } catch (error) {
+        console.error('Error in deleteAnalysis:', error);
+        return res.status(500).json({ message: 'Помилка сервера' });
+    }
+}
 }
 
 export default new AnalysisController();
