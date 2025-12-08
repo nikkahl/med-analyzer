@@ -46,7 +46,13 @@ router.get(
     '/:id', 
     authMiddleware, 
     AnalysisController.getAnalysisById
-); 
+);
+
+router.delete(
+  '/:id',
+  authMiddleware,
+  AnalysisController.deleteAnalysis
+);
 
 export default router;
 // update route force
