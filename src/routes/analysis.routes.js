@@ -42,17 +42,17 @@ router.patch(
   AnalysisController.updateIndicator
 );
 
-router.get(
-    '/:id', 
-    authMiddleware, 
-    AnalysisController.getAnalysisById
-);
-
+// Маршрут для видалення
 router.delete(
   '/:id',
   authMiddleware,
   AnalysisController.deleteAnalysis
 );
 
+router.get(
+    '/:id', 
+    authMiddleware, 
+    AnalysisController.getAnalysisById
+); 
+
 export default router;
-// update route force
