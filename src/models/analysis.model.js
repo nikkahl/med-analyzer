@@ -25,7 +25,7 @@ const analysisSchema = new Schema({
     type: Date,
     default: Date.now, 
   },
-  originalFilePath: { 
+  imageUrl: { 
     type: String,
     required: false, 
   },
@@ -33,14 +33,9 @@ const analysisSchema = new Schema({
     type: String,
     required: false, 
   },
-  
   parsedData: {
       type: Schema.Types.Mixed, 
       default: []
-  },
-  isVerified: { 
-    type: Boolean,
-    default: false, 
   },
   indicators: [indicatorResultSchema], 
 

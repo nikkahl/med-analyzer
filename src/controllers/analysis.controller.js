@@ -1,151 +1,120 @@
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import OcrService from '../services/ocr.service.js'; 
-import ParserService from '../services/parser.service.js';
-import AnalysisService from '../services/analysis.service.js';
 import Analysis from '../models/analysis.model.js';
-import logger from '../logger.js'; 
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import OcrService from '../services/ocr.service.js';
+import ParserService from '../services/parser.service.js';
+import logger from '../logger.js';
 
 class AnalysisController {
 
   async uploadAnalysis(req, res) {
     try {
-      if (req.fileValidationError) return res.status(400).json({ message: req.fileValidationError });
-      if (!req.file) return res.status(400).json({ message: 'Файл не завантажено' });
-      if (!req.user) return res.status(401).json({ message: 'Користувач не авторизований' });
-
-      const userId = req.user._id || req.user.id;
-      logger.info(`Отримано файл від user: ${userId}`);
-
-      const rawText = await OcrService.recognize(req.file.buffer);
-      const parsedIndicators = ParserService.parse(rawText);
-
-      const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
-      if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
-
-      const fileName = `analysis-${userId}-${Date.now()}.jpg`;
-      const filePath = path.join(uploadsDir, fileName);
-      await fs.promises.writeFile(filePath, req.file.buffer);
-
-      const dbPath = `/uploads/${fileName}`;
-
-      const analysisData = {
-        originalFilePath: dbPath, 
-        rawOcrText: rawText,
-        parsedData: parsedIndicators
-      };
-
-      const savedAnalysis = await AnalysisService.create(userId, analysisData);
-
-      const responseData = savedAnalysis.toObject();
-      if (!responseData.indicators || responseData.indicators.length === 0) {
-          responseData.indicators = responseData.parsedData || parsedIndicators;
+      if (!req.file) {
+        return res.status(400).json({ message: 'Файл не завантажено' });
       }
 
-      return res.status(201).json({ 
-        message: 'Аналіз успішно оброблено',
-        data: responseData
+      logger.info(`Початок обробки файлу для користувача: ${req.user.id}`);
+
+      // 1. OCR Розпізнавання
+      const rawText = await OcrService.recognize(req.file.buffer);
+      
+      // 2. Парсинг даних
+      const parsedData = ParserService.parse(rawText);
+
+      // 3. Підготовка картинки (Base64)
+      const b64 = Buffer.from(req.file.buffer).toString('base64');
+      const dataURI = `data:${req.file.mimetype};base64,${b64}`;
+
+      // 4. Збереження в БД
+      const newAnalysis = new Analysis({
+        user: req.user.id,
+        imageUrl: dataURI, // Зберігаємо фото
+        rawOcrText: rawText,
+        indicators: parsedData,
+        parsedData: parsedData 
       });
 
-    } catch (error) {
-      logger.error('Error in uploadAnalysis:', error);
-      return res.status(500).json({ message: 'Помилка обробки' });
+      await newAnalysis.save();
+
+      return res.status(201).json({
+        message: 'Аналіз успішно оброблено',
+        data: newAnalysis
+      });
+
+    } catch (e) {
+      logger.error('Помилка в uploadAnalysis:', e);
+      return res.status(500).json({ message: 'Помилка обробки аналізу', error: e.message });
     }
   }
 
   async getHistory(req, res) {
     try {
       const page = parseInt(req.query.page) || 1;
-      const limit = 20; 
+      const limit = parseInt(req.query.limit) || 10;
       const skip = (page - 1) * limit;
-      const userId = req.user._id || req.user.id;
 
-      const analyses = await Analysis.find({ user: userId }) 
-          .sort({ createdAt: -1 }) 
-          .skip(skip)
-          .limit(limit);
+      const analyses = await Analysis.find({ user: req.user.id })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit);
 
-      const total = await Analysis.countDocuments({ user: userId });
-
-      const mappedAnalyses = analyses.map(a => {
-          const obj = a.toObject();
-          const safeIndicators = (obj.indicators && obj.indicators.length > 0) 
-              ? obj.indicators 
-              : (obj.parsedData || []);
-
-          return {
-              _id: obj._id,
-              createdAt: obj.createdAt,
-              status: obj.status || 'completed',
-              imageUrl: obj.originalFilePath,
-              indicators: safeIndicators 
-          };
-      });
+      const total = await Analysis.countDocuments({ user: req.user.id });
 
       res.json({
-          data: mappedAnalyses,
-          currentPage: page,
-          totalPages: Math.ceil(total / limit)
+        data: analyses,
+        currentPage: page,
+        totalPages: Math.ceil(total / limit),
+        totalItems: total
       });
-    } catch (error) {
-      logger.error('Error in getHistory:', error);
-      res.status(500).json({ message: 'Помилка історії' });
+    } catch (e) {
+      logger.error(e);
+      res.status(500).json({ message: 'Помилка отримання історії' });
     }
   }
 
   async getAnalysisById(req, res) {
     try {
-        const analysis = await Analysis.findById(req.params.id);
-        if (!analysis) return res.status(404).json({ message: 'Аналіз не знайдено' });
-        
-        const obj = analysis.toObject();
-        if (!obj.indicators || obj.indicators.length === 0) {
-            obj.indicators = obj.parsedData || [];
-        }
-
-        res.json({ 
-            data: {
-                ...obj,
-                imageUrl: obj.originalFilePath
-            }
-        });
-    } catch (err) {
-        logger.error('Error in getAnalysisById:', err);
-        res.status(500).json({ message: 'Помилка сервера' });
+      const analysis = await Analysis.findOne({ _id: req.params.id, user: req.user.id });
+      if (!analysis) {
+        return res.status(404).json({ message: 'Аналіз не знайдено' });
+      }
+      res.json({ data: analysis });
+    } catch (e) {
+      res.status(500).json({ message: 'Server error' });
     }
   }
-
-  async updateIndicator(req, res) {
-    try {
-      const { analysisId, indicatorId } = req.params;
-      const { value } = req.body;
-      const updatedAnalysis = await AnalysisService.updateIndicatorValue(analysisId, indicatorId, value);
-      return res.status(200).json({ message: 'Value updated', data: updatedAnalysis });
-    } catch (error) {
-      logger.error('Error updating indicator:', error);
-      return res.status(500).json({ message: 'Error updating value' });
-    }
-  }
-
+  
   async deleteAnalysis(req, res) {
-    try {
-        const { id } = req.params;
-        const userId = req.user._id || req.user.id;
-        const deletedAnalysis = await Analysis.findOneAndDelete({ _id: id, user: userId });
-        
-        if (!deletedAnalysis) {
-            return res.status(404).json({ message: 'Аналіз не знайдено' });
+        try {
+            const analysis = await Analysis.findOneAndDelete({ _id: req.params.id, user: req.user.id });
+            if (!analysis) {
+                return res.status(404).json({ message: 'Аналіз не знайдено' });
+            }
+            return res.json({ message: 'Аналіз видалено' });
+        } catch (e) {
+            logger.error(e);
+            return res.status(500).json({ message: 'Помилка видалення' });
         }
-        return res.status(200).json({ message: 'Аналіз успішно видалено' });
-    } catch (error) {
-        logger.error('Error in deleteAnalysis:', error);
-        return res.status(500).json({ message: 'Помилка сервера' });
     }
-  }
+
+    async updateIndicator(req, res) {
+       try {
+            const { analysisId, indicatorId } = req.params;
+            const { value } = req.body;
+
+            const analysis = await Analysis.findOne({ _id: analysisId, user: req.user.id });
+            if (!analysis) return res.status(404).json({ message: 'Not found' });
+
+            const indicator = analysis.indicators.id(indicatorId);
+            if (!indicator) return res.status(404).json({ message: 'Indicator not found' });
+
+            indicator.value = value;
+            await analysis.save();
+
+            return res.json({ message: 'Updated', data: analysis });
+        } catch (e) {
+            logger.error(e);
+            return res.status(500).json({ message: 'Update error' });
+        }
+    }
 }
 
 export default new AnalysisController();

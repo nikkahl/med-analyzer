@@ -1,36 +1,67 @@
-// src/controllers/auth.controller.js
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import { validationResult } from 'express-validator';
+import User from '../models/user.model.js';
+import logger from '../logger.js';
 
-import AuthService from '../services/auth.service.js';
+class AuthController {
 
-export const register = async (req, res) => {
-  try {
-    const { email, password } = req.body;
+    async registration(req, res) {
+        try {
+            console.log('🔥 [DEBUG] Реєстрація...');
+            const errors = validationResult(req);
+            if (!errors.isEmpty()) {
+                return res.status(400).json({ message: 'Помилка валідації', errors: errors.array() });
+            }
 
-    if (!email || !password) {
-      return res.status(400).json({ message: 'Email and password are required' });
+            const { email, password } = req.body;
+            const candidate = await User.findOne({ email });
+
+            if (candidate) {
+                return res.status(400).json({ message: 'Такий користувач вже існує' });
+            }
+
+            const hashPassword = await bcrypt.hash(password, 7);
+            
+            // --- ВИПРАВЛЕННЯ ТУТ ---
+            // Було: const user = new User({ email, password: hashPassword });
+            // Стало (як хоче база):
+            const user = new User({ 
+                email, 
+                passwordHash: hashPassword 
+            });
+            
+            await user.save();
+            return res.json({ message: 'Користувач зареєстрований' });
+
+        } catch (e) {
+            console.error('❌ [DEBUG] Error:', e);
+            res.status(400).json({ message: 'Registration error', error: e.message });
+        }
     }
 
-    const userData = await AuthService.register(email, password);
+    async login(req, res) {
+        try {
+            const { email, password } = req.body;
+            const user = await User.findOne({ email });
+            
+            if (!user) {
+                return res.status(400).json({ message: 'Користувача не знайдено' });
+            }
 
-    return res.status(201).json({ message: 'User registered successfully', data: userData });
-  } catch (error) {
-    return res.status(409).json({ message: error.message });
-  }
-};
+            const validPassword = bcrypt.compareSync(password, user.passwordHash);
+            
+            if (!validPassword) {
+                return res.status(400).json({ message: 'Невірний пароль' });
+            }
 
-export const login = async (req, res) => {
-  try {
-    const { email, password } = req.body;
-
-    if (!email || !password) {
-      return res.status(400).json({ message: 'Email and password are required' });
+            const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || 'secret123', { expiresIn: '24h' });
+            return res.json({ token, user: { id: user._id, email: user.email } });
+        } catch (e) {
+            console.error(e);
+            res.status(400).json({ message: 'Login error' });
+        }
     }
+}
 
-    const userData = await AuthService.login(email, password);
-
-    return res.status(200).json({ message: 'Login successful', data: userData });
-
-  } catch (error) {
-    return res.status(401).json({ message: error.message });
-  }
-};
+export default new AuthController();

@@ -1,46 +1,68 @@
-// src/services/parser.service.js
-
 import IndicatorService from './indicator.service.js';
 import logger from '../logger.js';
 
 class ParserService {
   constructor() {
-    this.dictionary = []; 
+    this.dictionary = [];
     this.loadDictionary();
   }
 
   async loadDictionary() {
     try {
       this.dictionary = await IndicatorService.getAll();
-      logger.info(`Словник завантажено. ${this.dictionary.length} показників.`);
+      logger.info(`📚 Словник завантажено: ${this.dictionary.length} показників.`);
     } catch (error) {
-      logger.error('Failed to load indicator dictionary', error);
+      logger.error('❌ Помилка завантаження словника', error);
     }
   }
 
+  // Головна функція
   parse(rawText) {
     if (!this.dictionary.length || !rawText) return [];
+
+    // 1. АНОНІМІЗАЦІЯ (Ховаємо ім'я та дати для конфіденційності)
+    const cleanText = this.anonymizeText(rawText);
     
     const foundIndicators = [];
-    const lowerCaseText = rawText.toLowerCase();
+    // 2. Розбиваємо весь текст на окремі рядки
+    const lines = cleanText.split(/\r?\n/).filter(line => line.trim().length > 0);
 
     for (const indicator of this.dictionary) {
-      const searchTerms = [indicator.name.toLowerCase(), ...indicator.aliases.map(a => a.toLowerCase())];
+      const searchTerms = [indicator.name, ...indicator.aliases]
+        .map(t => t.toLowerCase().trim())
+        .filter(t => t.length > 0);
 
-      for (const term of searchTerms) {
-        if (lowerCaseText.includes(term)) {
-          const value = this.extractValue(lowerCaseText, term);
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].toLowerCase();
+
+        // Шукаємо, чи є назва показника в цьому рядку
+        const matchTerm = searchTerms.find(term => line.includes(term));
+
+        if (matchTerm) {
+          // Шукаємо значення СУВОРО в цьому ж рядку (після назви)
+          let value = this.extractValueFromLine(line, matchTerm);
+
+          // Якщо в рядку назва є, а цифри немає — перевіряємо наступний рядок
+          // (буває, що значення "з'їхало" вниз)
+          if (value === null && lines[i + 1]) {
+             value = this.extractValueFromLine(lines[i + 1], ''); 
+          }
 
           if (value !== null) {
-            foundIndicators.push({
-              dictionaryId: indicator._id,
-              name: indicator.name,
-              value: value,
-              units: indicator.units,
-              referenceMin: indicator.referenceMin,
-              referenceMax: indicator.referenceMax,
-            });
-            break; 
+            // Фільтр "адекватності": відсіюємо цифри, які явно не схожі на результат
+            // (наприклад, щоб не сплутати дату чи номер телефону з аналізом)
+            if (this.isValidValue(value, indicator)) {
+                foundIndicators.push({
+                  dictionaryId: indicator._id,
+                  name: indicator.name,
+                  value: value,
+                  units: indicator.units,
+                  referenceMin: indicator.referenceMin,
+                  referenceMax: indicator.referenceMax,
+                });
+                // Якщо знайшли показник — переходимо до пошуку наступного (щоб не дублювати)
+                break; 
+            }
           }
         }
       }
@@ -48,37 +70,51 @@ class ParserService {
     return foundIndicators;
   }
 
-  extractValue(text, term) {
+  // Функція для приховування особистих даних
+  anonymizeText(text) {
+    let anon = text;
+    // Замінюємо ПІБ на [КОНФІДЕНЦІЙНО]
+    anon = anon.replace(/(ПІБ|Пацієнт|Patient|Name)[:\s]+([А-ЯІЇЄA-Z][a-zа-яіїє]+)/gi, '$1: [КОНФІДЕНЦІЙНО]');
+    // Ховаємо дати (щоб парсер не плутав їх з показниками)
+    anon = anon.replace(/\d{1,2}[./-]\d{1,2}[./-]\d{2,4}/g, '[ДАТА]');
+    return anon;
+  }
+
+  extractValueFromLine(line, term) {
     try {
-      const termIndex = text.indexOf(term);
-      if (termIndex === -1) return null;
-
-      const startIndex = termIndex + term.length;
-      let searchSlice = text.substring(startIndex, startIndex + 50);
-
-     
-      const newlineIndex = searchSlice.indexOf('\n');
-      if (newlineIndex !== -1) {
-          searchSlice = searchSlice.substring(0, newlineIndex);
-      }
-      searchSlice = searchSlice.replace(/(\d)([a-zа-я%])/g, '$1 $2');
-      searchSlice = searchSlice.replace(/\d+[.,]?\d*\s*[-–]\s*\d+[.,]?\d*/g, " ");
-
-      const regex = /(?<!\d)(\d+[.,]?\d*)/;
-      const match = searchSlice.match(regex);
-
-      if (match && match[1]) {
-        const numericString = match[1].replace(',', '.');
-        const result = parseFloat(numericString);
-        
-        return isNaN(result) ? null : result;
+      // 1. ВАЖЛИВО: Беремо тільки ту частину рядка, що йде ПІСЛЯ назви показника.
+      // Це виправляє помилку, коли парсер хапав сміття "228" перед словом "Гематокрит".
+      let cleanLine = line;
+      if (term) {
+        const parts = line.split(term);
+        if (parts.length > 1) {
+            cleanLine = parts[1]; // Беремо праву частину
+        }
       }
 
-      return null; 
-    } catch (error) {
-      logger.error('Error extracting value:', error);
+      cleanLine = cleanLine.replace(/\d+(\.\d+)?\s*[-–—]\s*\d+(\.\d+)?/g, ''); 
+
+      cleanLine = cleanLine.replace(/(\d)[oOоО](\d)/g, '$10$2'); // 5O5 -> 505
+      cleanLine = cleanLine.replace(/,/g, '.'); // коми на крапки
+
+      const numberMatch = cleanLine.match(/(\d+(\.\d+)?)/);
+
+      if (numberMatch) {
+        return parseFloat(numberMatch[0]);
+      }
+      return null;
+    } catch (e) {
       return null;
     }
+  }
+
+  isValidValue(val, indicator) {
+    if (!indicator.referenceMin) return true;
+    
+    const min = indicator.referenceMin / 20;
+    const max = indicator.referenceMax * 20;
+    
+    return val > min && val < max;
   }
 }
 

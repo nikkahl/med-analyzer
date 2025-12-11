@@ -280,7 +280,7 @@ input:focus {
 
 .dashboard-container {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); /* Адаптивна сітка */
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); 
     gap: 1.5rem;
     padding: 2rem;
     max-width: 1400px;
@@ -793,6 +793,11 @@ body.dashboard-body {
 .load-more-container {
     text-align: center;
     margin-top: 2rem;
+}
+
+.camera-icon-wrapper svg {
+    stroke: white; 
+    fill: none;    
 }
 
 /* =========================================

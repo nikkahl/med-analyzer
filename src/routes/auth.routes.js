@@ -1,57 +1,17 @@
 import { Router } from 'express';
-import multer from 'multer';
-import authMiddleware from '../middleware/auth.middleware.js';
-import AnalysisController from '../controllers/analysis.controller.js';
+import AuthController from '../controllers/auth.controller.js'; 
+import { check } from 'express-validator';
 
 const router = Router();
-const storage = multer.memoryStorage();
-
-const fileFilter = (req, file, cb) => {
-  if (file.mimetype === 'image/jpeg' || file.mimetype === 'image/png') {
-    cb(null, true);
-  } else {
-    req.fileValidationError = 'Invalid file type. Only JPEG and PNG are allowed.';
-    cb(null, false);
-  }
-};
-
-const upload = multer({
-  storage: storage,
-  fileFilter: fileFilter, 
-  limits: {
-    fileSize: 5 * 1024 * 1024 
-  }
-});
-
 router.post(
-  '/upload',
-  authMiddleware,
-  upload.single('analysisImage'),
-  AnalysisController.uploadAnalysis
+    '/register', 
+    [
+        check('email', 'Некоректний email').isEmail(),
+        check('password', 'Пароль має бути довшим за 4 символи').isLength({ min: 4 })
+    ], 
+    AuthController.registration
 );
 
-router.get(
-  '/history',
-  authMiddleware,
-  AnalysisController.getHistory
-);
-
-router.patch(
-  '/:analysisId/indicators/:indicatorId',
-  authMiddleware,
-  AnalysisController.updateIndicator
-);
-
-router.delete(
-  '/:id',
-  authMiddleware,
-  AnalysisController.deleteAnalysis
-);
-
-router.get(
-    '/:id', 
-    authMiddleware, 
-    AnalysisController.getAnalysisById
-); 
+router.post('/login', AuthController.login);
 
 export default router;
