@@ -60,7 +60,6 @@ class ParserService {
                   referenceMin: indicator.referenceMin,
                   referenceMax: indicator.referenceMax,
                 });
-                // Якщо знайшли показник — переходимо до пошуку наступного (щоб не дублювати)
                 break; 
             }
           }
@@ -73,29 +72,25 @@ class ParserService {
   // Функція для приховування особистих даних
   anonymizeText(text) {
     let anon = text;
-    // Замінюємо ПІБ на [КОНФІДЕНЦІЙНО]
     anon = anon.replace(/(ПІБ|Пацієнт|Patient|Name)[:\s]+([А-ЯІЇЄA-Z][a-zа-яіїє]+)/gi, '$1: [КОНФІДЕНЦІЙНО]');
-    // Ховаємо дати (щоб парсер не плутав їх з показниками)
     anon = anon.replace(/\d{1,2}[./-]\d{1,2}[./-]\d{2,4}/g, '[ДАТА]');
     return anon;
   }
 
   extractValueFromLine(line, term) {
     try {
-      // 1. ВАЖЛИВО: Беремо тільки ту частину рядка, що йде ПІСЛЯ назви показника.
-      // Це виправляє помилку, коли парсер хапав сміття "228" перед словом "Гематокрит".
       let cleanLine = line;
       if (term) {
         const parts = line.split(term);
         if (parts.length > 1) {
-            cleanLine = parts[1]; // Беремо праву частину
+            cleanLine = parts[1]; 
         }
       }
 
       cleanLine = cleanLine.replace(/\d+(\.\d+)?\s*[-–—]\s*\d+(\.\d+)?/g, ''); 
 
-      cleanLine = cleanLine.replace(/(\d)[oOоО](\d)/g, '$10$2'); // 5O5 -> 505
-      cleanLine = cleanLine.replace(/,/g, '.'); // коми на крапки
+      cleanLine = cleanLine.replace(/(\d)[oOоО](\d)/g, '$10$2'); 
+      cleanLine = cleanLine.replace(/,/g, '.'); 
 
       const numberMatch = cleanLine.match(/(\d+(\.\d+)?)/);
 

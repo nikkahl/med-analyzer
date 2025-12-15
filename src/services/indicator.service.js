@@ -1,4 +1,3 @@
-// src/services/indicator.service.js
 
 import Indicator from '../models/indicator.model.js';
 import logger from '../logger.js';
