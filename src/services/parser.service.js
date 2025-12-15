@@ -10,9 +10,9 @@ class ParserService {
   async loadDictionary() {
     try {
       this.dictionary = await IndicatorService.getAll();
-      logger.info(`📚 Словник завантажено: ${this.dictionary.length} показників.`);
+      logger.info(`Словник завантажено: ${this.dictionary.length} показників.`);
     } catch (error) {
-      logger.error('❌ Помилка завантаження словника', error);
+      logger.error('Помилка завантаження словника', error);
     }
   }
 
@@ -70,12 +70,13 @@ class ParserService {
   }
 
   // Функція для приховування особистих даних
-  anonymizeText(text) {
-    let anon = text;
-    anon = anon.replace(/(ПІБ|Пацієнт|Patient|Name)[:\s]+([А-ЯІЇЄA-Z][a-zа-яіїє]+)/gi, '$1: [КОНФІДЕНЦІЙНО]');
-    anon = anon.replace(/\d{1,2}[./-]\d{1,2}[./-]\d{2,4}/g, '[ДАТА]');
-    return anon;
-  }
+
+anonymizeText(text) {
+    let anon = text;
+    anon = anon.replace(/(ПІБ|Пацієнт|Patient|Name)\s*[:.-]?\s*([^\n\r]+)/gi, '$1: [КОНФІДЕНЦІЙНО]');
+    anon = anon.replace(/\d{1,2}\s*[./-]\s*\d{1,2}\s*[./-]\s*\d{2,4}/g, '[ДАТА]');
+    return anon;
+  }
 
   extractValueFromLine(line, term) {
     try {
